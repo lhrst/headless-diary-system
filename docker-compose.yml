@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./api
+    env_file: .env
+    volumes:
+      - ./data/diaries:/data/diaries
+      - ./data/media:/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+  celery-worker:
+    build: ./api
+    command: celery -A app.tasks worker --loglevel=info --concurrency=2
+    env_file: .env
+    volumes:
+      - ./data/diaries:/data/diaries
+      - ./data/media:/data/media
+      - whisper-models:/root/.cache/huggingface
+    depends_on:
+      - api
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: diary
+      POSTGRES_USER: diary_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diary_user -d diary"]
+      interval: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - ./data/redis:/data
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+  web:
+    build: ./web
+    env_file: .env
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+    networks:
+      - diary-net
+
+networks:
+  diary-net:
+    driver: bridge
+
+volumes:
+  whisper-models:

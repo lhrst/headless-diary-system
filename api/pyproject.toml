@@ -1,0 +1,39 @@
+[project]
+name = "headless-diary-api"
+version = "0.1.0"
+description = "Headless Diary System - API Server"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg",
+    "alembic",
+    "pydantic-settings",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "celery[redis]>=5.4",
+    "redis",
+    "httpx",
+    "python-multipart",
+    "email-validator",
+    "psycopg2-binary",
+    "Pillow>=10.0",
+    "pillow-heif>=0.18",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx",
+    "aiosqlite",
+]
+cloud = ["openai>=1.0"]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

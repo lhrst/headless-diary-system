@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "../themes/default.css";
+@import "../themes/journal.css";
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-bg);
+    color: var(--color-accent);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2
+      text-sm font-medium text-white transition-colors
+      focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background-color: var(--color-primary);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+  }
+  .btn-primary:focus {
+    --tw-ring-color: var(--color-primary);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border px-4 py-2
+      text-sm font-medium transition-colors
+      focus:outline-none focus:ring-2 focus:ring-offset-2;
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-bg-hover);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-3 py-2
+      text-sm font-medium transition-colors;
+    color: var(--color-text-secondary);
+  }
+  .btn-ghost:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-text);
+  }
+
+  .input {
+    @apply w-full rounded-lg border px-3 py-2 text-sm transition-colors
+      placeholder:text-text-tertiary
+      focus:outline-none focus:ring-2;
+    border-color: var(--color-border);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+  .input:hover {
+    border-color: var(--color-border-hover);
+  }
+  .input:focus {
+    border-color: var(--color-primary);
+    --tw-ring-color: var(--color-accent-bg);
+  }
+
+  .card {
+    @apply rounded-xl border p-5 transition-shadow;
+    border-color: var(--color-border);
+    background-color: var(--color-bg);
+  }
+  .card:hover {
+    @apply shadow-sm;
+    border-color: var(--color-border-hover);
+  }
+
+  .tag {
+    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors;
+    background-color: var(--color-accent-bg);
+    color: var(--color-accent);
+  }
+  .tag:hover {
+    filter: brightness(0.95);
+  }
+}
+
+/* Markdown content styles */
+.prose h1 { @apply text-2xl font-bold mt-6 mb-3; }
+.prose h2 { @apply text-xl font-semibold mt-5 mb-2; }
+.prose h3 { @apply text-lg font-medium mt-4 mb-2; }
+.prose p { @apply my-2 leading-relaxed; }
+.prose ul { @apply list-disc pl-6 my-2; }
+.prose ol { @apply list-decimal pl-6 my-2; }
+.prose li { @apply my-1; }
+.prose blockquote {
+  @apply border-l-4 pl-4 my-3 italic;
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+.prose code {
+  @apply rounded px-1.5 py-0.5 text-sm;
+  background-color: var(--color-bg-secondary);
+}
+.prose pre {
+  @apply rounded-lg p-4 my-3 overflow-x-auto text-sm;
+  background-color: var(--color-bg-secondary);
+}
+.prose pre code {
+  @apply bg-transparent p-0;
+}
+.prose a {
+  color: var(--color-primary);
+  @apply underline;
+}
+.prose a:hover {
+  color: var(--color-primary-hover);
+}
+.prose hr {
+  @apply my-6;
+  border-color: var(--color-border);
+}
+.prose table { @apply w-full my-3 text-sm; }
+.prose th { @apply border-b-2 px-3 py-2 text-left font-semibold; border-color: var(--color-border); }
+.prose td { @apply border-b px-3 py-2; border-color: var(--color-border); }

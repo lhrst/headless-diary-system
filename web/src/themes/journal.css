@@ -1,0 +1,17 @@
+[data-theme="journal"] {
+  --color-primary: #92400e;
+  --color-primary-hover: #78350f;
+  --color-bg: #fefce8;
+  --color-bg-secondary: #fef9c3;
+  --color-bg-hover: #fef08a;
+  --color-text: #422006;
+  --color-text-secondary: #854d0e;
+  --color-text-tertiary: #a16207;
+  --color-border: #fde68a;
+  --color-border-hover: #fcd34d;
+  --color-accent: #b45309;
+  --color-accent-bg: #fef3c7;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+}
