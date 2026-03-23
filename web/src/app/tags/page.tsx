@@ -54,8 +54,8 @@ export default function TagsPage() {
             const size = 0.875 + ratio * 0.75; // 0.875rem to 1.625rem
             return (
               <button
-                key={t.name}
-                onClick={() => router.push(`/tags/${encodeURIComponent(t.name)}`)}
+                key={t.tag}
+                onClick={() => router.push(`/tags/${encodeURIComponent(t.tag)}`)}
                 className="rounded-lg px-3 py-1.5 font-medium transition-colors"
                 style={{
                   fontSize: `${size}rem`,
@@ -63,7 +63,7 @@ export default function TagsPage() {
                   color: "var(--color-accent)",
                 }}
               >
-                {t.name}
+                {t.tag}
                 <span className="ml-1 text-xs opacity-60">{t.count}</span>
               </button>
             );

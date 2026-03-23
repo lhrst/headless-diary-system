@@ -22,9 +22,9 @@ export default function TagFilterPage() {
     async (p: number, append = false) => {
       setLoading(true);
       try {
-        const res = await getDiaries({ page: p, page_size: 20, tag });
+        const res = await getDiaries({ page: p, per_page: 20, tag });
         setDiaries((prev) => (append ? [...prev, ...res.items] : res.items));
-        setHasNext(res.has_next);
+        setHasNext(res.items.length >= 20 && res.total > p * 20);
         setPage(p);
       } catch (err) {
         console.error(err);
