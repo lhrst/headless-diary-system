@@ -6,10 +6,11 @@ import type { DiaryBrief } from "@/lib/types";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("zh-CN", {
-    year: "numeric",
-    month: "long",
+  return d.toLocaleString("zh-CN", {
+    month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 

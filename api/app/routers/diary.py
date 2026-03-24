@@ -476,7 +476,21 @@ async def update_diary(
             db.add(DiaryTag(entry_id=entry.id, tag=tag_name.lower()))
 
     await db.flush()
-    await db.refresh(entry, attribute_names=["tags", "references_out", "backlinks", "comments", "agent_tasks"])
+    await db.refresh(entry)
+
+    # Re-fetch with eager loading to avoid greenlet issues
+    result = await db.execute(
+        select(DiaryEntry)
+        .options(
+            selectinload(DiaryEntry.tags),
+            selectinload(DiaryEntry.references_out),
+            selectinload(DiaryEntry.backlinks),
+            selectinload(DiaryEntry.comments),
+            selectinload(DiaryEntry.agent_tasks),
+        )
+        .where(DiaryEntry.id == entry_id)
+    )
+    entry = result.scalar_one()
 
     content = body.content if body.content is not None else (entry.raw_text or "")
     return _entry_to_detail(entry, content)

@@ -7,6 +7,9 @@ import { getDiaries, getTags, createDiary } from "@/lib/api";
 import type { DiaryBrief, TagSuggestItem } from "@/lib/types";
 import DiaryCard from "@/components/DiaryCard";
 import Navbar from "@/components/Navbar";
+import dynamic from "next/dynamic";
+
+const Editor = dynamic(() => import("@/components/Editor"), { ssr: false });
 
 export default function HomePage() {
   const { mounted, authed } = useAuth();
@@ -22,8 +25,8 @@ export default function HomePage() {
   const [search, setSearch] = useState(qParam);
   const [activeTag, setActiveTag] = useState(tagParam);
   const [quickContent, setQuickContent] = useState("");
+  const [quickTitle, setQuickTitle] = useState("");
   const [publishing, setPublishing] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
 
@@ -81,20 +84,14 @@ export default function HomePage() {
     if (!quickContent.trim() || publishing) return;
     setPublishing(true);
     try {
-      await createDiary(quickContent, undefined, userLat, userLng);
+      await createDiary(quickContent, quickTitle || undefined, userLat, userLng);
       setQuickContent("");
+      setQuickTitle("");
       loadDiaries(1);
     } catch (err) {
       console.error(err);
     } finally {
       setPublishing(false);
-    }
-  };
-
-  const handleQuickKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleQuickPublish();
     }
   };
 
@@ -121,20 +118,28 @@ export default function HomePage() {
               backgroundColor: "var(--color-surface, var(--color-bg))",
             }}
           >
-            <textarea
-              ref={textareaRef}
-              className="input min-h-[100px] resize-none"
+            <input
+              type="text"
+              className="input mb-2"
+              placeholder="标题（可选，AI 会自动生成）"
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+            />
+            <Editor
               placeholder="记录一下..."
-              value={quickContent}
-              onChange={(e) => setQuickContent(e.target.value)}
-              onKeyDown={handleQuickKeyDown}
+              onChange={(html) => setQuickContent(html)}
+              onSubmit={handleQuickPublish}
+              onFileUpload={async (file) => {
+                try {
+                  const { uploadMedia } = await import("@/lib/api");
+                  const res = await uploadMedia(file);
+                  setQuickContent((prev) => prev + `\n${res.markdown_embed}\n`);
+                } catch (e) { console.error(e); }
+              }}
             />
             <div
-              className="mt-2 flex items-center justify-end gap-4 text-sm"
-              style={{ color: "var(--color-text-tertiary)" }}
+              className="mt-2 flex items-center justify-end gap-2"
             >
-              <span>字数: {quickContent.length}</span>
-              <span className="hidden sm:inline">⌘Enter 发布</span>
               <button
                 onClick={handleQuickPublish}
                 className="btn-primary"

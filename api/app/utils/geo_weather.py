@@ -63,6 +63,15 @@ async def reverse_geocode(lat: float, lng: float) -> str | None:
             )
             resp.raise_for_status()
             data = resp.json()
-            return data.get("display_name", "")[:500]
+            addr = data.get("address", {})
+            # Build address without postcode and country
+            parts = []
+            for key in ("road", "neighbourhood", "suburb", "district",
+                        "city_district", "city", "town", "village",
+                        "state", "province"):
+                val = addr.get(key)
+                if val and val not in parts:
+                    parts.append(val)
+            return ", ".join(parts) if parts else data.get("display_name", "")[:500]
     except Exception:
         return None
