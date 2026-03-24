@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, func, text
+from sqlalchemy import Boolean, Float, ForeignKey, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,12 @@ class DiaryEntry(Base):
     content_path: Mapped[str] = mapped_column(String(500), nullable=False)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    weather: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "晴 15°C"
+    weather_icon: Mapped[str | None] = mapped_column(String(20), nullable=True)  # e.g. "☀️"
+    temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_agent_marked: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False
     )

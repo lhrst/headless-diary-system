@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { useAuth } from "@/lib/useAuth";
 import Navbar from "@/components/Navbar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 export default function SettingsPage() {
-  const router = useRouter();
+  const { mounted } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated()) router.replace("/login");
-  }, [router]);
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
 
   return (
     <>

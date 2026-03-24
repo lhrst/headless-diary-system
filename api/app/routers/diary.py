@@ -54,7 +54,11 @@ def _entry_to_brief(entry: DiaryEntry) -> DiaryBrief:
         title=_entry_title(entry),
         title_source=_entry_title_source(entry),
         tags=[t.tag for t in entry.tags],
+        ai_tags=[t.tag for t in entry.tags if t.is_ai],
         preview=preview,
+        address=entry.address,
+        weather=entry.weather,
+        weather_icon=entry.weather_icon,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )
@@ -76,6 +80,7 @@ def _entry_to_detail(entry: DiaryEntry, content: str) -> DiaryDetail:
         title_source=_entry_title_source(entry),
         content=content,
         tags=[t.tag for t in entry.tags],
+        ai_tags=[t.tag for t in entry.tags if t.is_ai],
         references_out=[
             _ref_info(ref.target) for ref in entry.references_out
         ],
@@ -101,6 +106,12 @@ def _entry_to_detail(entry: DiaryEntry, content: str) -> DiaryDetail:
             }
             for t in entry.agent_tasks
         ],
+        latitude=entry.latitude,
+        longitude=entry.longitude,
+        address=entry.address,
+        weather=entry.weather,
+        weather_icon=entry.weather_icon,
+        temperature=entry.temperature,
         is_agent_marked=entry.is_agent_marked,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
@@ -172,19 +183,137 @@ async def create_diary(
         db.add(task)
 
     await db.flush()
-    await db.refresh(entry, attribute_names=["tags", "references_out", "backlinks", "comments", "agent_tasks"])
+    await db.refresh(entry)
 
-    # Dispatch agent tasks and auto-title asynchronously
+    # Generate auto-title inline via OpenRouter
     try:
-        from app.tasks.title_tasks import generate_auto_title
-        generate_auto_title.delay(str(entry.id))
-        from app.tasks.agent_tasks import run_agent
-        for task in entry.agent_tasks:
-            run_agent.delay(str(task.id))
-    except Exception:
-        pass  # Celery may not be available in dev
+        import httpx
+        _TITLE_PROMPT = ("用一句话（15字以内中文或8个词以内英文）概括这篇日记的核心内容，作为标题。"
+                         "不要加引号和标点。直接输出标题。\n\n日记内容：\n" + body.content[:2000])
+        with httpx.Client(timeout=30, proxy=None) as client:
+            resp = client.post(
+                f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "anthropic/claude-3.5-haiku",
+                    "messages": [{"role": "user", "content": _TITLE_PROMPT}],
+                    "max_tokens": 50,
+                },
+            )
+            resp.raise_for_status()
+            title = resp.json()["choices"][0]["message"]["content"].strip()
+            title = title.strip('"\'""''').rstrip("。.!！?？")
+            if title and len(title) <= 100:
+                entry.auto_title = title
+                await db.flush()
+                await db.refresh(entry)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Log but don't fail
 
-    return _entry_to_detail(entry, body.content)
+    # Auto-generate tags if none provided
+    if not tags:
+        try:
+            import httpx
+            from sqlalchemy import distinct
+            # Get existing tags for context
+            existing_tags_result = await db.execute(
+                select(distinct(DiaryTag.tag))
+                .join(DiaryEntry, DiaryTag.entry_id == DiaryEntry.id)
+                .where(DiaryEntry.author_id == current_user.id)
+                .limit(50)
+            )
+            existing_tags = [r[0] for r in existing_tags_result.all()]
+
+            tag_prompt = (
+                "根据以下日记内容，生成1-3个简洁的标签（每个标签2-4个字）。\n"
+                f"用户已有的标签：{', '.join(existing_tags[:30])}\n"
+                "优先从已有标签中匹配，如果都不合适再创建新标签。\n"
+                "只输出标签，用逗号分隔，不要加#号。\n\n"
+                f"日记内容：{body.content[:1000]}"
+            )
+            with httpx.Client(timeout=15, proxy=None) as client:
+                resp = client.post(
+                    f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "google/gemini-2.0-flash-001",
+                        "messages": [{"role": "user", "content": tag_prompt}],
+                        "max_tokens": 50,
+                    },
+                )
+                resp.raise_for_status()
+                ai_tags_raw = resp.json()["choices"][0]["message"]["content"].strip()
+                ai_tags = [t.strip().strip("#").lower() for t in ai_tags_raw.split(",") if t.strip()]
+                ai_tags = [t for t in ai_tags if len(t) <= 20 and len(t) >= 1][:3]
+
+                for tag_name in ai_tags:
+                    db.add(DiaryTag(entry_id=entry.id, tag=tag_name, is_ai=True))
+                tags = ai_tags
+                await db.flush()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
+    # Fetch weather and address if coordinates provided
+    if body.latitude is not None and body.longitude is not None:
+        from app.utils.geo_weather import get_weather, reverse_geocode
+        import asyncio
+
+        entry.latitude = body.latitude
+        entry.longitude = body.longitude
+
+        weather_task = get_weather(body.latitude, body.longitude)
+        address_task = reverse_geocode(body.latitude, body.longitude)
+        weather_data, address = await asyncio.gather(weather_task, address_task)
+
+        if weather_data:
+            entry.weather = weather_data.get("weather")
+            entry.weather_icon = weather_data.get("weather_icon")
+            entry.temperature = weather_data.get("temperature")
+        if address:
+            entry.address = address
+
+        await db.flush()
+        await db.refresh(entry)
+
+    # Determine which tags are AI-generated
+    ai_tags = []
+    try:
+        await db.refresh(entry, attribute_names=["tags"])
+        ai_tags = [t.tag for t in entry.tags if t.is_ai]
+    except Exception:
+        pass
+
+    # Build response directly (avoid lazy-load issues)
+    return DiaryDetail(
+        id=entry.id,
+        author=entry.author_id,
+        title=entry.auto_title or entry.manual_title or "Untitled",
+        title_source="auto" if entry.auto_title else ("manual" if entry.manual_title else "none"),
+        content=body.content,
+        tags=tags,
+        ai_tags=ai_tags,
+        references_out=[],
+        backlinks=[],
+        comments=[],
+        agent_tasks=[{"id": str(t.id), "command": cmd, "status": "pending", "created_at": ""} for t, cmd in zip([], agent_cmds)],
+        latitude=entry.latitude,
+        longitude=entry.longitude,
+        address=entry.address,
+        weather=entry.weather,
+        weather_icon=entry.weather_icon,
+        temperature=entry.temperature,
+        is_agent_marked=bool(agent_cmds),
+        created_at=entry.created_at,
+        updated_at=entry.updated_at,
+    )
 
 
 @router.get("", response_model=DiaryListResponse)
@@ -195,6 +324,8 @@ async def list_diaries(
     q: str | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
+    has_location: bool | None = None,
+    weather: str | None = None,
     sort: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -224,6 +355,16 @@ async def list_diaries(
     if end_date:
         query = query.where(func.date(DiaryEntry.created_at) <= end_date)
         count_query = count_query.where(func.date(DiaryEntry.created_at) <= end_date)
+    if has_location is True:
+        query = query.where(DiaryEntry.latitude.isnot(None))
+        count_query = count_query.where(DiaryEntry.latitude.isnot(None))
+    elif has_location is False:
+        query = query.where(DiaryEntry.latitude.is_(None))
+        count_query = count_query.where(DiaryEntry.latitude.is_(None))
+    if weather:
+        like_expr_w = f"%{weather}%"
+        query = query.where(DiaryEntry.weather.ilike(like_expr_w))
+        count_query = count_query.where(DiaryEntry.weather.ilike(like_expr_w))
 
     # Sort
     order_col = DiaryEntry.created_at.desc() if sort == "desc" else DiaryEntry.created_at.asc()
@@ -380,3 +521,158 @@ async def get_backlinks(
 ):
     entry = await _get_entry_or_404(entry_id, db)
     return [_ref_info(ref.source) for ref in entry.backlinks]
+
+
+@router.post("/batch-titles", status_code=200)
+async def batch_generate_titles(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Scan all untitled diaries and generate titles using a cheap model."""
+    import httpx
+
+    # Find all entries without auto_title
+    result = await db.execute(
+        select(DiaryEntry)
+        .where(
+            DiaryEntry.author_id == current_user.id,
+            DiaryEntry.auto_title.is_(None),
+            DiaryEntry.raw_text.isnot(None),
+        )
+        .order_by(DiaryEntry.created_at.desc())
+    )
+    entries = result.scalars().all()
+
+    if not entries:
+        return {"message": "No untitled diaries found", "updated": 0}
+
+    updated = 0
+    errors = []
+    CHEAP_MODEL = "google/gemini-2.0-flash-001"
+
+    for entry in entries:
+        try:
+            prompt = ("用一句话（15字以内中文或8个词以内英文）概括这篇日记的核心内容，作为标题。"
+                      "不要加引号和标点。直接输出标题。\n\n日记内容：\n" + (entry.raw_text or "")[:2000])
+            with httpx.Client(timeout=30, proxy=None) as client:
+                resp = client.post(
+                    f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": CHEAP_MODEL,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 50,
+                    },
+                )
+                resp.raise_for_status()
+                title = resp.json()["choices"][0]["message"]["content"].strip()
+                title = title.strip('"\'""''').rstrip("。.!！?？")
+                if title and len(title) <= 100:
+                    entry.auto_title = title
+                    updated += 1
+        except Exception as e:
+            errors.append({"entry_id": str(entry.id), "error": str(e)})
+
+    await db.flush()
+    return {
+        "message": f"Generated {updated} titles out of {len(entries)} untitled diaries",
+        "updated": updated,
+        "total": len(entries),
+        "model": CHEAP_MODEL,
+        "errors": errors[:5] if errors else [],
+    }
+
+
+@router.post("/batch-tags", status_code=200)
+async def batch_generate_tags(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Scan all diaries without tags and generate tags using a cheap model."""
+    import httpx
+    from sqlalchemy import distinct, exists
+
+    # Find entries with no tags at all
+    has_tags_subq = (
+        select(DiaryTag.entry_id)
+        .where(DiaryTag.entry_id == DiaryEntry.id)
+        .correlate(DiaryEntry)
+        .exists()
+    )
+    result = await db.execute(
+        select(DiaryEntry)
+        .where(
+            DiaryEntry.author_id == current_user.id,
+            DiaryEntry.raw_text.isnot(None),
+            ~has_tags_subq,
+        )
+        .order_by(DiaryEntry.created_at.desc())
+    )
+    entries = result.scalars().all()
+
+    if not entries:
+        return {"message": "No untagged diaries found", "updated": 0}
+
+    # Get existing tags for context
+    existing_tags_result = await db.execute(
+        select(distinct(DiaryTag.tag))
+        .join(DiaryEntry, DiaryTag.entry_id == DiaryEntry.id)
+        .where(DiaryEntry.author_id == current_user.id)
+        .limit(50)
+    )
+    existing_tags = [r[0] for r in existing_tags_result.all()]
+
+    updated = 0
+    errors = []
+    CHEAP_MODEL = "google/gemini-2.0-flash-001"
+
+    for entry in entries:
+        try:
+            tag_prompt = (
+                "根据以下日记内容，生成1-3个简洁的标签（每个标签2-4个字）。\n"
+                f"用户已有的标签：{', '.join(existing_tags[:30])}\n"
+                "优先从已有标签中匹配，如果都不合适再创建新标签。\n"
+                "只输出标签，用逗号分隔，不要加#号。\n\n"
+                f"日记内容：{(entry.raw_text or '')[:1000]}"
+            )
+            with httpx.Client(timeout=15, proxy=None) as client:
+                resp = client.post(
+                    f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": CHEAP_MODEL,
+                        "messages": [{"role": "user", "content": tag_prompt}],
+                        "max_tokens": 50,
+                    },
+                )
+                resp.raise_for_status()
+                ai_tags_raw = resp.json()["choices"][0]["message"]["content"].strip()
+                ai_tags = [t.strip().strip("#").lower() for t in ai_tags_raw.split(",") if t.strip()]
+                ai_tags = [t for t in ai_tags if len(t) <= 20 and len(t) >= 1][:3]
+
+                for tag_name in ai_tags:
+                    db.add(DiaryTag(entry_id=entry.id, tag=tag_name, is_ai=True))
+
+                if ai_tags:
+                    updated += 1
+                    # Update existing_tags list for subsequent entries
+                    for t in ai_tags:
+                        if t not in existing_tags:
+                            existing_tags.append(t)
+        except Exception as e:
+            errors.append({"entry_id": str(entry.id), "error": str(e)})
+
+    await db.flush()
+    return {
+        "message": f"Generated tags for {updated} out of {len(entries)} untagged diaries",
+        "updated": updated,
+        "total": len(entries),
+        "model": CHEAP_MODEL,
+        "errors": errors[:5] if errors else [],
+    }

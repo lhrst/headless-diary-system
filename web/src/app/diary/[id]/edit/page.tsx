@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { useAuth } from "@/lib/useAuth";
 import { getDiary, updateDiary } from "@/lib/api";
 import Navbar from "@/components/Navbar";
+import Editor, { htmlToMarkdown, markdownToHtml } from "@/components/Editor";
 
 export default function EditDiaryPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+
+  const { mounted, authed } = useAuth();
 
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
@@ -18,10 +21,7 @@ export default function EditDiaryPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
-      return;
-    }
+    if (!authed) return;
     getDiary(id)
       .then((d) => {
         setContent(d.content);
@@ -29,7 +29,11 @@ export default function EditDiaryPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id, router]);
+  }, [id, authed]);
+
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
 
   const handleSave = async () => {
     if (!content.trim()) return;
@@ -93,11 +97,11 @@ export default function EditDiaryPage() {
           onChange={(e) => setTitle(e.target.value)}
         />
 
-        <textarea
-          className="input min-h-[60vh] resize-none font-sans leading-relaxed"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          autoFocus
+        <Editor
+          initialContent={markdownToHtml(content)}
+          onChange={(html) => setContent(htmlToMarkdown(html))}
+          onSubmit={handleSave}
+          className="min-h-[60vh]"
         />
       </main>
     </>

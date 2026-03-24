@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { isAuthenticated } from "@/lib/auth";
+import { useAuth } from "@/lib/useAuth";
 import { getDiary, deleteDiary } from "@/lib/api";
 import type { DiaryDetail, CommentResponse } from "@/lib/types";
 import Navbar from "@/components/Navbar";
@@ -26,16 +26,15 @@ export default function DiaryDetailPage() {
   const router = useRouter();
   const id = params.id as string;
 
+  const { mounted, authed } = useAuth();
+
   const [diary, setDiary] = useState<DiaryDetail | null>(null);
   const [comments, setComments] = useState<CommentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
-      return;
-    }
+    if (!authed) return;
     getDiary(id)
       .then((d) => {
         setDiary(d);
@@ -43,7 +42,11 @@ export default function DiaryDetailPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id, router]);
+  }, [id, authed]);
+
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
 
   const handleDelete = async () => {
     if (!confirm("确定要删除这篇日记吗？")) return;
@@ -119,20 +122,64 @@ export default function DiaryDetailPage() {
               <span> (编辑于 {formatDate(diary.updated_at)})</span>
             )}
           </time>
+          {(diary.weather || diary.weather_icon || diary.address) && (
+            <p className="mt-1 text-sm"
+              style={{ color: "var(--color-text-tertiary)" }}>
+              {diary.weather_icon && <span>{diary.weather_icon} </span>}
+              {diary.weather && <span>{diary.weather} </span>}
+              {diary.temperature !== undefined && (
+                <span>{diary.temperature}°C </span>
+              )}
+              {diary.address && (
+                <span>
+                  {(diary.weather || diary.weather_icon || diary.temperature !== undefined) ? "· " : ""}
+                  {diary.address}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         {/* Tags */}
         {diary.tags.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-1.5">
-            {diary.tags.map((t) => (
-              <span
-                key={t}
-                className="tag cursor-pointer"
-                onClick={() => router.push(`/tags/${encodeURIComponent(t)}`)}
-              >
-                {t}
-              </span>
-            ))}
+            {diary.tags.map((t) => {
+              const isAi = diary.ai_tags?.includes(t);
+              return (
+                <span
+                  key={t}
+                  className={`tag cursor-pointer${isAi ? " tag-ai" : ""}`}
+                  style={isAi ? {
+                    borderStyle: "dashed",
+                    opacity: 0.85,
+                  } : undefined}
+                  onClick={() => router.push(`/tags/${encodeURIComponent(t)}`)}
+                >
+                  {isAi && (
+                    <svg
+                      className="inline-block mr-0.5 -mt-0.5"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                      <path d="M16 14h.01" />
+                      <path d="M8 14h.01" />
+                      <path d="M12 18v4" />
+                      <path d="M7 22h10" />
+                      <path d="M5 12H3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2" />
+                      <path d="M19 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2" />
+                    </svg>
+                  )}
+                  {t}
+                </span>
+              );
+            })}
           </div>
         )}
 

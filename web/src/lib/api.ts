@@ -7,6 +7,7 @@ import type {
   TagSuggestResponse,
   DiarySuggestResponse,
   TagListResponse,
+  TagTreeResponse,
   CommentResponse,
   MediaUploadResponse,
   MediaInfoResponse,
@@ -161,10 +162,17 @@ export async function getDiary(id: string): Promise<DiaryDetail> {
 export async function createDiary(
   content: string,
   manualTitle?: string,
+  latitude?: number,
+  longitude?: number,
 ): Promise<DiaryDetail> {
+  const payload: Record<string, unknown> = { content, manual_title: manualTitle };
+  if (latitude !== undefined && longitude !== undefined) {
+    payload.latitude = latitude;
+    payload.longitude = longitude;
+  }
   return fetchApi<DiaryDetail>("/diary", {
     method: "POST",
-    body: JSON.stringify({ content, manual_title: manualTitle }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -201,6 +209,23 @@ export async function suggestDiary(q: string): Promise<import("./types").DiarySu
 
 export async function getTags(): Promise<TagListResponse> {
   return fetchApi<TagListResponse>("/tags");
+}
+
+export async function getTagTree(): Promise<TagTreeResponse> {
+  return fetchApi<TagTreeResponse>("/tags/tree");
+}
+
+export async function setTagHierarchy(tag: string, parent: string): Promise<void> {
+  return fetchApi<void>("/tags/hierarchy", {
+    method: "PUT",
+    body: JSON.stringify({ tag, parent }),
+  });
+}
+
+export async function removeTagHierarchy(tag: string): Promise<void> {
+  return fetchApi<void>(`/tags/hierarchy/${encodeURIComponent(tag)}`, {
+    method: "DELETE",
+  });
 }
 
 /* ── Comments ── */

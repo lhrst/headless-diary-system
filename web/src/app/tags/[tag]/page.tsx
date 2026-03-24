@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { useAuth } from "@/lib/useAuth";
 import { getDiaries } from "@/lib/api";
 import type { DiaryBrief } from "@/lib/types";
 import DiaryCard from "@/components/DiaryCard";
 import Navbar from "@/components/Navbar";
 
 export default function TagFilterPage() {
+  const { mounted, authed } = useAuth();
   const params = useParams();
   const router = useRouter();
   const tag = decodeURIComponent(params.tag as string);
@@ -36,12 +37,13 @@ export default function TagFilterPage() {
   );
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
-      return;
-    }
+    if (!authed) return;
     load(1);
-  }, [router, load]);
+  }, [authed, load]);
+
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
 
   return (
     <>

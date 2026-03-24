@@ -11,6 +11,8 @@ class DiaryCreate(BaseModel):
 
     content: str
     manual_title: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class DiaryUpdate(BaseModel):
@@ -35,7 +37,11 @@ class DiaryBrief(BaseModel):
     title: str
     title_source: str
     tags: list[str]
+    ai_tags: list[str] = []
     preview: str
+    address: str | None = None
+    weather: str | None = None
+    weather_icon: str | None = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -49,10 +55,17 @@ class DiaryDetail(BaseModel):
     title_source: str
     content: str
     tags: list[str]
+    ai_tags: list[str] = []
     references_out: list[ReferenceInfo]
     backlinks: list[ReferenceInfo]
     comments: list
     agent_tasks: list
+    latitude: float | None = None
+    longitude: float | None = None
+    address: str | None = None
+    weather: str | None = None
+    weather_icon: str | None = None
+    temperature: float | None = None
     is_agent_marked: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime

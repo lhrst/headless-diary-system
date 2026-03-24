@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import Base  # noqa: F401 – ensure models registered
+from app.database import get_db as _get_db
 
 _ALGORITHM = "HS256"
 _bearer_scheme = HTTPBearer()
@@ -54,15 +54,9 @@ def verify_token(token: str) -> dict:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    db: AsyncSession = Depends(_get_db),
 ):
-    """FastAPI dependency that extracts the current user from the Bearer token.
-
-    Usage::
-
-        @router.get("/me")
-        async def me(user = Depends(get_current_user)):
-            ...
-    """
+    """FastAPI dependency that extracts the current user from the Bearer token."""
     payload = verify_token(credentials.credentials)
 
     if payload.get("type") != "access":
@@ -78,13 +72,10 @@ async def get_current_user(
             detail="Token missing subject",
         )
 
-    # Lazy import to avoid circular dependency
     from app.models.user import User
-    from app.database import async_session_factory
 
-    async with async_session_factory() as session:
-        result = await session.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
 
     if user is None:
         raise HTTPException(

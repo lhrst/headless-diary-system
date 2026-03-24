@@ -32,7 +32,7 @@ Respond concisely in the user's language. If asked to suggest tags, return them 
 def _call_openrouter(messages: list[dict], model: str = None, max_tokens: int = 2000) -> dict:
     """Call OpenRouter API synchronously."""
     if model is None:
-        model = "anthropic/claude-haiku-4-5-20251001"
+        model = "anthropic/claude-3.5-haiku"
 
     with httpx.Client(timeout=120) as client:
         response = client.post(
@@ -128,9 +128,9 @@ def run_agent(self, task_id: str):
         context = _build_context_sync(db, task.command, str(task.entry_id))
 
         # Choose model based on complexity
-        model = "anthropic/claude-haiku-4-5-20251001"
+        model = "anthropic/claude-3.5-haiku"
         if any(kw in task.command for kw in ["分析", "对比", "规划", "深度"]):
-            model = "anthropic/claude-sonnet-4-20250514"
+            model = "anthropic/claude-3.5-sonnet"
 
         # Get current diary content
         entry = db.query(DiaryEntry).filter(DiaryEntry.id == task.entry_id).first()

@@ -5,7 +5,11 @@ export interface DiaryBrief {
   title: string;
   title_source: string;
   tags: string[];
+  ai_tags?: string[];
   preview: string;
+  address?: string;
+  weather?: string;
+  weather_icon?: string;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +27,13 @@ export interface DiaryDetail {
   title_source: string;
   content: string;
   tags: string[];
+  ai_tags?: string[];
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+  weather?: string;
+  weather_icon?: string;
+  temperature?: number;
   references_out: ReferenceInfo[];
   backlinks: ReferenceInfo[];
   comments: CommentResponse[];
@@ -52,6 +63,16 @@ export interface TagSuggestResponse {
 
 export interface TagListResponse {
   tags: TagSuggestItem[];
+}
+
+export interface TagTreeNode {
+  tag: string;
+  count: number;
+  children: TagTreeNode[];
+}
+
+export interface TagTreeResponse {
+  tree: TagTreeNode[];
 }
 
 /* ── Diary Suggest ── */

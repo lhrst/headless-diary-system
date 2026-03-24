@@ -1,12 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isAuthenticated, clearTokens } from "@/lib/auth";
 
 export default function Navbar() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [showAuth, setShowAuth] = useState(false);
+
+  useEffect(() => {
+    setShowAuth(isAuthenticated());
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +25,7 @@ export default function Navbar() {
     router.push("/login");
   };
 
-  if (!isAuthenticated()) return null;
+  if (!showAuth) return null;
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm"

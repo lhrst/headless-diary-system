@@ -1,29 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { useAuth } from "@/lib/useAuth";
 import { createDiary } from "@/lib/api";
 import Navbar from "@/components/Navbar";
+import Editor, { htmlToMarkdown } from "@/components/Editor";
 
 export default function NewDiaryPage() {
+  const { mounted } = useAuth();
   const router = useRouter();
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!isAuthenticated()) router.replace("/login");
-  }, [router]);
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
 
   const handleSave = async () => {
     if (!content.trim()) return;
     setSaving(true);
     setError("");
     try {
-      const diary = await createDiary(content, title || undefined);
-      router.push(`/diary/${diary.id}`);
+      await createDiary(content, title || undefined);
+      router.push("/");
     } catch {
       setError("保存失败，请重试");
     } finally {
@@ -67,12 +69,11 @@ export default function NewDiaryPage() {
           onChange={(e) => setTitle(e.target.value)}
         />
 
-        <textarea
-          className="input min-h-[60vh] resize-none font-sans leading-relaxed"
+        <Editor
           placeholder="开始记录今天的想法..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          autoFocus
+          onChange={(html) => setContent(htmlToMarkdown(html))}
+          onSubmit={handleSave}
+          className="min-h-[60vh]"
         />
       </main>
     </>

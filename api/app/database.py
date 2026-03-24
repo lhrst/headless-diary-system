@@ -19,10 +19,18 @@ async_session_factory = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Sync engine (for Celery workers)
-_sync_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+aiosqlite", "")
-sync_engine = create_engine(_sync_url, echo=False, pool_pre_ping=True)
-sync_session_factory = sessionmaker(sync_engine, expire_on_commit=False)
+# Sync engine (for Celery workers) — lazy init to avoid import-time connection
+_sync_engine = None
+_sync_session = None
+
+
+def sync_session_factory():
+    global _sync_engine, _sync_session
+    if _sync_session is None:
+        _sync_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+aiosqlite", "")
+        _sync_engine = create_engine(_sync_url, echo=False, pool_pre_ping=True)
+        _sync_session = sessionmaker(_sync_engine, expire_on_commit=False)
+    return _sync_session()
 
 
 class Base(DeclarativeBase):

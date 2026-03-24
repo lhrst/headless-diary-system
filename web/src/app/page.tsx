@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
-import { getDiaries, getTags } from "@/lib/api";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/useAuth";
+import { getDiaries, getTags, createDiary } from "@/lib/api";
 import type { DiaryBrief, TagSuggestItem } from "@/lib/types";
 import DiaryCard from "@/components/DiaryCard";
 import Navbar from "@/components/Navbar";
 
 export default function HomePage() {
-  const router = useRouter();
+  const { mounted, authed } = useAuth();
   const searchParams = useSearchParams();
   const qParam = searchParams.get("q") || "";
   const tagParam = searchParams.get("tag") || "";
@@ -21,6 +21,26 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(qParam);
   const [activeTag, setActiveTag] = useState(tagParam);
+  const [quickContent, setQuickContent] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [userLat, setUserLat] = useState<number | undefined>();
+  const [userLng, setUserLng] = useState<number | undefined>();
+
+  // Request geolocation on mount
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLat(pos.coords.latitude);
+          setUserLng(pos.coords.longitude);
+        },
+        () => {
+          // User denied or error — silently ignore
+        },
+      );
+    }
+  }, []);
 
   const loadDiaries = useCallback(
     async (p: number, append = false) => {
@@ -45,19 +65,37 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
-      return;
-    }
+    if (!authed) return;
     loadDiaries(1);
     getTags()
       .then((res) => setTags(res.tags))
       .catch(console.error);
-  }, [router, loadDiaries]);
+  }, [authed, loadDiaries]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadDiaries(1);
+  };
+
+  const handleQuickPublish = async () => {
+    if (!quickContent.trim() || publishing) return;
+    setPublishing(true);
+    try {
+      await createDiary(quickContent, undefined, userLat, userLng);
+      setQuickContent("");
+      loadDiaries(1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleQuickKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleQuickPublish();
+    }
   };
 
   const handleTagClick = (tag: string) => {
@@ -66,10 +104,48 @@ export default function HomePage() {
     setTimeout(() => loadDiaries(1), 0);
   };
 
+  if (!mounted) {
+    return <div className="py-20 text-center text-sm">加载中...</div>;
+  }
+
   return (
     <>
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 py-8">
+        {/* Quick publish */}
+        {authed && (
+          <div
+            className="mb-6 rounded-xl border p-4"
+            style={{
+              borderColor: "var(--color-border)",
+              backgroundColor: "var(--color-surface, var(--color-bg))",
+            }}
+          >
+            <textarea
+              ref={textareaRef}
+              className="input min-h-[100px] resize-none"
+              placeholder="记录一下..."
+              value={quickContent}
+              onChange={(e) => setQuickContent(e.target.value)}
+              onKeyDown={handleQuickKeyDown}
+            />
+            <div
+              className="mt-2 flex items-center justify-end gap-4 text-sm"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              <span>字数: {quickContent.length}</span>
+              <span className="hidden sm:inline">⌘Enter 发布</span>
+              <button
+                onClick={handleQuickPublish}
+                className="btn-primary"
+                disabled={publishing || !quickContent.trim()}
+              >
+                {publishing ? "发布中..." : "发布"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Search */}
         <form onSubmit={handleSearch} className="mb-6">
           <input

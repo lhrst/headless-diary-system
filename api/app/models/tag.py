@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,8 +22,26 @@ class DiaryTag(Base):
         nullable=False,
     )
     tag: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_ai: Mapped[bool] = mapped_column(Boolean, server_default=text("false"), nullable=False)
 
     # relationships
     entry: Mapped["DiaryEntry"] = relationship(
         "DiaryEntry", back_populates="tags", lazy="selectin"
+    )
+
+
+class TagHierarchy(Base):
+    __tablename__ = "tag_hierarchy"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    parent_tag: Mapped[str] = mapped_column(String(100), nullable=False)
+    child_tag: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "parent_tag", "child_tag"),
     )
