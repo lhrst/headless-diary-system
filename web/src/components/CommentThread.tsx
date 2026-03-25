@@ -63,16 +63,7 @@ export default function CommentThread({ entryId, comments, onNewComment }: Props
             }}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                {c.author_id}
-                {c.author_role === "agent" && (
-                  <span className="ml-1.5 text-xs rounded px-1 py-0.5"
-                    style={{
-                      backgroundColor: "var(--color-primary)",
-                      color: "#fff",
-                    }}>
-                    AI
-                  </span>
-                )}
+                {c.author_role === "agent" ? "🤖 AI 助手" : "我"}
               </span>
               <time className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
                 {formatTime(c.created_at)}

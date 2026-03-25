@@ -188,8 +188,7 @@ async def create_diary(
     # Generate auto-title inline via OpenRouter
     try:
         import httpx
-        _TITLE_PROMPT = ("用一句话（15字以内中文或8个词以内英文）概括这篇日记的核心内容，作为标题。"
-                         "不要加引号和标点。直接输出标题。\n\n日记内容：\n" + body.content[:2000])
+        _TITLE_PROMPT = ("为这篇日记生成一个简短标题，要求：\n1. 最多10个中文字或5个英文词\n2. 不要引号、标点、解释\n3. 只输出标题本身\n\n日记内容：\n" + body.content[:2000])
         with httpx.Client(timeout=30, proxy=None) as client:
             resp = client.post(
                 f"{settings.OPENROUTER_BASE_URL}/chat/completions",
@@ -206,6 +205,9 @@ async def create_diary(
             resp.raise_for_status()
             title = resp.json()["choices"][0]["message"]["content"].strip()
             title = title.strip('"\'""''').rstrip("。.!！?？")
+            title = title[:30]  # Hard limit
+            if "。" in title:
+                title = title.split("。")[0]
             if title and len(title) <= 100:
                 entry.auto_title = title
                 await db.flush()
@@ -229,10 +231,12 @@ async def create_diary(
             existing_tags = [r[0] for r in existing_tags_result.all()]
 
             tag_prompt = (
-                "根据以下日记内容，生成1-3个简洁的标签（每个标签2-4个字）。\n"
-                f"用户已有的标签：{', '.join(existing_tags[:30])}\n"
-                "优先从已有标签中匹配，如果都不合适再创建新标签。\n"
-                "只输出标签，用逗号分隔，不要加#号。\n\n"
+                "根据日记内容生成1-3个分类标签。要求：\n"
+                "1. 每个标签2-4个字，必须是有意义的分类词\n"
+                "2. 不要用日记中出现的原词做标签\n"
+                "3. 不要用问候语、感叹词做标签\n"
+                f"4. 参考已有标签优先复用：{', '.join(existing_tags[:30])}\n"
+                "5. 只输出标签，用逗号分隔\n\n"
                 f"日记内容：{body.content[:1000]}"
             )
             with httpx.Client(timeout=15, proxy=None) as client:
@@ -566,8 +570,7 @@ async def batch_generate_titles(
 
     for entry in entries:
         try:
-            prompt = ("用一句话（15字以内中文或8个词以内英文）概括这篇日记的核心内容，作为标题。"
-                      "不要加引号和标点。直接输出标题。\n\n日记内容：\n" + (entry.raw_text or "")[:2000])
+            prompt = ("为这篇日记生成一个简短标题，要求：\n1. 最多10个中文字或5个英文词\n2. 不要引号、标点、解释\n3. 只输出标题本身\n\n日记内容：\n" + (entry.raw_text or "")[:2000])
             with httpx.Client(timeout=30, proxy=None) as client:
                 resp = client.post(
                     f"{settings.OPENROUTER_BASE_URL}/chat/completions",
@@ -584,6 +587,9 @@ async def batch_generate_titles(
                 resp.raise_for_status()
                 title = resp.json()["choices"][0]["message"]["content"].strip()
                 title = title.strip('"\'""''').rstrip("。.!！?？")
+                title = title[:30]  # Hard limit
+                if "。" in title:
+                    title = title.split("。")[0]
                 if title and len(title) <= 100:
                     entry.auto_title = title
                     updated += 1
@@ -646,10 +652,12 @@ async def batch_generate_tags(
     for entry in entries:
         try:
             tag_prompt = (
-                "根据以下日记内容，生成1-3个简洁的标签（每个标签2-4个字）。\n"
-                f"用户已有的标签：{', '.join(existing_tags[:30])}\n"
-                "优先从已有标签中匹配，如果都不合适再创建新标签。\n"
-                "只输出标签，用逗号分隔，不要加#号。\n\n"
+                "根据日记内容生成1-3个分类标签。要求：\n"
+                "1. 每个标签2-4个字，必须是有意义的分类词\n"
+                "2. 不要用日记中出现的原词做标签\n"
+                "3. 不要用问候语、感叹词做标签\n"
+                f"4. 参考已有标签优先复用：{', '.join(existing_tags[:30])}\n"
+                "5. 只输出标签，用逗号分隔\n\n"
                 f"日记内容：{(entry.raw_text or '')[:1000]}"
             )
             with httpx.Client(timeout=15, proxy=None) as client:

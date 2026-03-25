@@ -127,12 +127,9 @@ export default function DiaryDetailPage() {
               style={{ color: "var(--color-text-tertiary)" }}>
               {diary.weather_icon && <span>{diary.weather_icon} </span>}
               {diary.weather && <span>{diary.weather} </span>}
-              {diary.temperature !== undefined && (
-                <span>{diary.temperature}°C </span>
-              )}
               {diary.address && (
                 <span>
-                  {(diary.weather || diary.weather_icon || diary.temperature !== undefined) ? "· " : ""}
+                  {(diary.weather || diary.weather_icon) ? "· " : ""}
                   {diary.address}
                 </span>
               )}
@@ -185,9 +182,13 @@ export default function DiaryDetailPage() {
 
         {/* Content */}
         <article className="prose mb-8">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {diary.content}
-          </ReactMarkdown>
+          {diary.content.includes('<p>') || diary.content.includes('<h') || diary.content.includes('<strong>') ? (
+            <div dangerouslySetInnerHTML={{ __html: diary.content }} />
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {diary.content}
+            </ReactMarkdown>
+          )}
         </article>
 
         {/* References */}
