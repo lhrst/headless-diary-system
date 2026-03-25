@@ -14,6 +14,7 @@ const config: Config = {
         background: "var(--color-bg)",
         "bg-secondary": "var(--color-bg-secondary)",
         "bg-hover": "var(--color-bg-hover)",
+        surface: "var(--color-surface, #ffffff)",
         foreground: "var(--color-text)",
         "text-secondary": "var(--color-text-secondary)",
         "text-tertiary": "var(--color-text-tertiary)",
@@ -23,10 +24,23 @@ const config: Config = {
         "accent-bg": "var(--color-accent-bg)",
       },
       fontFamily: {
-        sans: ["Inter", "Noto Sans SC", "system-ui", "sans-serif"],
+        sans: ["DM Sans", "Noto Sans SC", "system-ui", "sans-serif"],
+        serif: ["Lora", "Noto Serif SC", "Georgia", "serif"],
       },
       maxWidth: {
         content: "48rem",
+      },
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        glow: "var(--shadow-glow)",
       },
     },
   },

@@ -42,45 +42,86 @@ export default function TagFilterPage() {
   }, [authed, load]);
 
   if (!mounted) {
-    return <div className="py-20 text-center text-sm">加载中...</div>;
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">加载中...</span>
+      </div>
+    );
   }
 
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-8 animate-fade-in">
         <div className="mb-6 flex items-center gap-3">
-          <button onClick={() => router.back()} className="btn-ghost">
-            &larr;
+          <button
+            onClick={() => router.back()}
+            className="btn-ghost"
+            style={{ padding: "6px" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
+            </svg>
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
+          <h1
+            className="font-serif text-xl font-bold"
+            style={{ color: "var(--color-text)" }}
+          >
             标签：
             <span className="tag ml-2 text-base">{tag}</span>
           </h1>
         </div>
 
         <div className="space-y-3">
-          {diaries.map((d) => (
-            <DiaryCard key={d.id} diary={d} />
+          {diaries.map((d, i) => (
+            <DiaryCard key={d.id} diary={d} index={i} />
           ))}
         </div>
 
-        {loading && (
-          <div className="py-12 text-center text-sm"
-            style={{ color: "var(--color-text-tertiary)" }}>
-            加载中...
+        {loading && diaries.length === 0 && (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="card animate-fade-in-up"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="skeleton h-5 w-3/5 mb-3" />
+                <div className="skeleton h-4 w-full mb-1.5" />
+                <div className="skeleton h-4 w-4/5" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loading && diaries.length > 0 && (
+          <div
+            className="py-8 text-center"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            <span
+              className="inline-block h-5 w-5 rounded-full border-2 border-current border-t-transparent"
+              style={{ animation: "spin 0.8s linear infinite" }}
+            />
           </div>
         )}
 
         {!loading && diaries.length === 0 && (
-          <p className="py-12 text-center text-sm"
-            style={{ color: "var(--color-text-secondary)" }}>
-            该标签下暂无日记
-          </p>
+          <div className="py-16 text-center">
+            <p
+              className="text-sm"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              该标签下暂无日记
+            </p>
+          </div>
         )}
 
         {hasNext && !loading && (
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <button
               onClick={() => load(page + 1, true)}
               className="btn-secondary"
@@ -90,6 +131,12 @@ export default function TagFilterPage() {
           </div>
         )}
       </main>
+
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

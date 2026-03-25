@@ -1,18 +1,43 @@
 :root,
 [data-theme="default"] {
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-bg: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-hover: #f3f4f6;
-  --color-text: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
-  --color-accent: #2563eb;
-  --color-accent-bg: #eff6ff;
-  --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  /* ── Warm Cream & Terracotta Palette ── */
+  --color-primary: #B87351;
+  --color-primary-hover: #9E5F3E;
+  --color-primary-light: #D4A389;
+
+  --color-bg: #FAF7F4;
+  --color-bg-secondary: #F3EDE7;
+  --color-bg-hover: #EBE3DA;
+  --color-surface: #FFFFFF;
+
+  --color-text: #2A2118;
+  --color-text-secondary: #7D6E60;
+  --color-text-tertiary: #A99B8D;
+
+  --color-border: #E8E0D7;
+  --color-border-hover: #D8CEC3;
+
+  --color-accent: #B87351;
+  --color-accent-bg: #FBF0E8;
+
+  --color-danger: #C4523A;
+  --color-success: #5E8A5E;
+  --color-warning: #C4943A;
+
+  /* ── Shadows (warm-tinted) ── */
+  --shadow-sm: 0 1px 3px rgba(42, 33, 24, 0.04), 0 1px 2px rgba(42, 33, 24, 0.02);
+  --shadow-md: 0 4px 12px rgba(42, 33, 24, 0.06), 0 2px 4px rgba(42, 33, 24, 0.03);
+  --shadow-lg: 0 8px 24px rgba(42, 33, 24, 0.08), 0 4px 8px rgba(42, 33, 24, 0.04);
+  --shadow-glow: 0 0 0 3px rgba(184, 115, 81, 0.12);
+
+  /* ── Transitions ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* ── Radii ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 }

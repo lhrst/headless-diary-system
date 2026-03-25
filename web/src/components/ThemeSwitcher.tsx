@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 
 const themes = [
-  { id: "default", name: "默认", desc: "简洁现代" },
-  { id: "journal", name: "日记本", desc: "温暖纸质风" },
+  { id: "default", name: "奶油白", desc: "温暖明亮" },
+  { id: "journal", name: "手帐棕", desc: "复古质感" },
 ];
 
 export default function ThemeSwitcher() {
@@ -21,34 +21,40 @@ export default function ThemeSwitcher() {
   };
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold"
-        style={{ color: "var(--color-text-secondary)" }}>
-        主题
+    <div>
+      <h3
+        className="mb-3 text-sm font-semibold"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        外观主题
       </h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {themes.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => switchTheme(t.id)}
-            className="rounded-xl border p-4 text-left transition-all"
-            style={{
-              borderColor: current === t.id
-                ? "var(--color-primary)"
-                : "var(--color-border)",
-              backgroundColor: current === t.id
-                ? "var(--color-accent-bg)"
-                : "var(--color-bg)",
-            }}
-          >
-            <div className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+      <div className="flex gap-2">
+        {themes.map((t) => {
+          const isActive = current === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => switchTheme(t.id)}
+              className="px-4 py-2.5 text-sm font-medium transition-all"
+              style={{
+                borderRadius: "var(--radius-md)",
+                border: isActive
+                  ? "2px solid var(--color-primary)"
+                  : "1.5px solid var(--color-border)",
+                backgroundColor: isActive
+                  ? "var(--color-accent-bg)"
+                  : "var(--color-surface, #fff)",
+                color: isActive
+                  ? "var(--color-primary)"
+                  : "var(--color-text-secondary)",
+                boxShadow: isActive ? "var(--shadow-glow)" : "none",
+              }}
+            >
               {t.name}
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-              {t.desc}
-            </div>
-          </button>
-        ))}
+              <span className="ml-1 text-xs opacity-60">{t.desc}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -27,73 +27,95 @@ function TreeNodeItem({
   const hasChildren = node.children.length > 0;
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
-      <div className="flex items-center gap-2 py-1.5 group">
-        {/* Expand/collapse toggle */}
+    <div style={{ marginLeft: depth > 0 ? 24 : 0 }}>
+      <div className="flex items-center gap-2 py-2 group">
         <button
-          className="w-5 h-5 flex items-center justify-center text-xs shrink-0"
-          style={{ color: "var(--color-text-tertiary)" }}
+          className="flex h-5 w-5 shrink-0 items-center justify-center transition-transform"
+          style={{
+            color: "var(--color-text-tertiary)",
+            transform: hasChildren && expanded ? "rotate(90deg)" : "rotate(0deg)",
+          }}
           onClick={() => setExpanded(!expanded)}
         >
-          {hasChildren ? (expanded ? "\u25BC" : "\u25B6") : "\u00B7"}
+          {hasChildren ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          ) : (
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: "var(--color-border)" }}
+            />
+          )}
         </button>
 
-        {/* Tag name */}
         <button
-          className="rounded-lg px-2.5 py-1 font-medium transition-colors text-sm"
-          style={{
-            backgroundColor: "var(--color-accent-bg)",
-            color: "var(--color-accent)",
-          }}
+          className="tag cursor-pointer"
           onClick={() => onNavigate(node.tag)}
         >
           {node.tag}
-          <span className="ml-1 text-xs opacity-60">{node.count}</span>
+          <span className="ml-1 opacity-50">{node.count}</span>
         </button>
 
-        {/* Actions (visible on hover) */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
-            className="text-xs px-1.5 py-0.5 rounded"
-            style={{ color: "var(--color-text-tertiary)" }}
+            className="text-xs px-2 py-0.5 transition-colors"
+            style={{
+              color: "var(--color-text-tertiary)",
+              borderRadius: "var(--radius-sm)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             onClick={() => setShowParentSelect(!showParentSelect)}
-            title="Set parent tag"
           >
-            {depth > 0 ? "Move" : "Set Parent"}
+            {depth > 0 ? "移动" : "设置父级"}
           </button>
           {depth > 0 && (
             <button
-              className="text-xs px-1.5 py-0.5 rounded"
-              style={{ color: "var(--color-danger, #ef4444)" }}
+              className="text-xs px-2 py-0.5 transition-colors"
+              style={{
+                color: "var(--color-danger)",
+                borderRadius: "var(--radius-sm)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  "rgba(196, 82, 58, 0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               onClick={() => onRemoveHierarchy(node.tag)}
-              title="Remove from parent"
             >
-              Detach
+              解除
             </button>
           )}
         </div>
       </div>
 
-      {/* Parent selection dropdown */}
       {showParentSelect && (
         <div
-          className="ml-7 mb-2 p-2 rounded-lg border text-sm"
-          style={{ borderColor: "var(--color-border)", maxWidth: 300 }}
+          className="ml-7 mb-3 p-3 animate-scale-in"
+          style={{
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "var(--color-surface, #fff)",
+            maxWidth: 300,
+          }}
         >
-          <p className="text-xs mb-1" style={{ color: "var(--color-text-secondary)" }}>
-            Select parent for &quot;{node.tag}&quot;:
+          <p className="text-xs mb-2" style={{ color: "var(--color-text-secondary)" }}>
+            选择「{node.tag}」的父标签：
           </p>
-          <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
             {allTags
               .filter((t) => t.tag !== node.tag)
               .map((t) => (
                 <button
                   key={t.tag}
-                  className="text-xs px-2 py-0.5 rounded-md"
-                  style={{
-                    backgroundColor: "var(--color-accent-bg)",
-                    color: "var(--color-accent)",
-                  }}
+                  className="tag text-xs cursor-pointer"
                   onClick={() => {
                     onSetParent(node.tag, t.tag);
                     setShowParentSelect(false);
@@ -104,18 +126,17 @@ function TreeNodeItem({
               ))}
           </div>
           <button
-            className="mt-1 text-xs"
+            className="mt-2 text-xs"
             style={{ color: "var(--color-text-tertiary)" }}
             onClick={() => setShowParentSelect(false)}
           >
-            Cancel
+            取消
           </button>
         </div>
       )}
 
-      {/* Children */}
       {hasChildren && expanded && (
-        <div>
+        <div className="animate-slide-up">
           {node.children.map((child) => (
             <TreeNodeItem
               key={child.tag}
@@ -165,7 +186,6 @@ export default function TagsPage() {
       await loadData();
     } catch (e) {
       console.error(e);
-      alert("Failed to set parent tag");
     }
   };
 
@@ -175,80 +195,136 @@ export default function TagsPage() {
       await loadData();
     } catch (e) {
       console.error(e);
-      alert("Failed to remove hierarchy");
     }
   };
 
   const maxCount = Math.max(...tags.map((t) => t.count), 1);
 
   if (!mounted) {
-    return <div className="py-20 text-center text-sm">Loading...</div>;
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">加载中...</span>
+      </div>
+    );
   }
 
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-8 animate-fade-in">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-            Tags
-          </h1>
-          <div className="flex gap-1 rounded-lg p-0.5" style={{ backgroundColor: "var(--color-accent-bg)" }}>
+          <div className="flex items-center gap-3">
             <button
-              className="px-3 py-1 text-sm rounded-md transition-colors"
-              style={{
-                backgroundColor: viewMode === "tree" ? "var(--color-accent)" : "transparent",
-                color: viewMode === "tree" ? "white" : "var(--color-accent)",
-              }}
-              onClick={() => setViewMode("tree")}
+              onClick={() => router.push("/")}
+              className="btn-ghost"
+              style={{ padding: "6px" }}
             >
-              Tree
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
+              </svg>
             </button>
-            <button
-              className="px-3 py-1 text-sm rounded-md transition-colors"
-              style={{
-                backgroundColor: viewMode === "cloud" ? "var(--color-accent)" : "transparent",
-                color: viewMode === "cloud" ? "white" : "var(--color-accent)",
-              }}
-              onClick={() => setViewMode("cloud")}
+            <h1
+              className="font-serif text-2xl font-bold"
+              style={{ color: "var(--color-text)" }}
             >
-              Cloud
-            </button>
+              标签
+            </h1>
+          </div>
+
+          {/* View mode toggle */}
+          <div
+            className="flex gap-0.5 p-1"
+            style={{
+              backgroundColor: "var(--color-bg-secondary)",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            {[
+              { id: "tree" as const, label: "树形" },
+              { id: "cloud" as const, label: "云图" },
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                className="px-3 py-1.5 text-sm font-medium transition-all"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor:
+                    viewMode === mode.id ? "var(--color-surface, #fff)" : "transparent",
+                  color:
+                    viewMode === mode.id
+                      ? "var(--color-text)"
+                      : "var(--color-text-tertiary)",
+                  boxShadow: viewMode === mode.id ? "var(--shadow-sm)" : "none",
+                }}
+                onClick={() => setViewMode(mode.id)}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {loading && (
-          <div className="py-12 text-center text-sm"
-            style={{ color: "var(--color-text-tertiary)" }}>
-            Loading...
+          <div className="space-y-3">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-2 animate-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="skeleton h-5 w-5 rounded-full" />
+                <div className="skeleton h-7 w-20" />
+              </div>
+            ))}
           </div>
         )}
 
         {!loading && tags.length === 0 && (
-          <p className="py-12 text-center text-sm"
-            style={{ color: "var(--color-text-secondary)" }}>
-            No tags yet
-          </p>
+          <div className="py-16 text-center">
+            <div
+              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl"
+              style={{ backgroundColor: "var(--color-accent-bg)" }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 2 7l10 5 10-5-10-5Z" /><path d="m2 17 10 5 10-5" /><path d="m2 12 10 5 10-5" />
+              </svg>
+            </div>
+            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              暂无标签
+            </p>
+          </div>
         )}
 
         {!loading && tags.length > 0 && viewMode === "cloud" && (
-          <div className="flex flex-wrap gap-3">
-            {tags.map((t) => {
+          <div className="flex flex-wrap gap-3 animate-fade-in">
+            {tags.map((t, i) => {
               const ratio = t.count / maxCount;
               const size = 0.875 + ratio * 0.75;
               return (
                 <button
                   key={t.tag}
-                  onClick={() => router.push(`/tags/${encodeURIComponent(t.tag)}`)}
-                  className="rounded-lg px-3 py-1.5 font-medium transition-colors"
+                  onClick={() =>
+                    router.push(`/tags/${encodeURIComponent(t.tag)}`)
+                  }
+                  className="font-medium transition-all animate-fade-in-up"
                   style={{
+                    animationDelay: `${i * 40}ms`,
                     fontSize: `${size}rem`,
+                    padding: "6px 14px",
                     backgroundColor: "var(--color-accent-bg)",
                     color: "var(--color-accent)",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.05)";
+                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   {t.tag}
-                  <span className="ml-1 text-xs opacity-60">{t.count}</span>
+                  <span className="ml-1 text-xs opacity-50">{t.count}</span>
                 </button>
               );
             })}
@@ -256,7 +332,7 @@ export default function TagsPage() {
         )}
 
         {!loading && tags.length > 0 && viewMode === "tree" && (
-          <div>
+          <div className="animate-fade-in">
             {tree.map((node) => (
               <TreeNodeItem
                 key={node.tag}
@@ -265,7 +341,9 @@ export default function TagsPage() {
                 allTags={tags}
                 onSetParent={handleSetParent}
                 onRemoveHierarchy={handleRemoveHierarchy}
-                onNavigate={(tag) => router.push(`/tags/${encodeURIComponent(tag)}`)}
+                onNavigate={(tag) =>
+                  router.push(`/tags/${encodeURIComponent(tag)}`)
+                }
               />
             ))}
           </div>

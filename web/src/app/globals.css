@@ -5,9 +5,61 @@
 @import "../themes/default.css";
 @import "../themes/journal.css";
 
+/* ── Keyframes ── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gentlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes warmGlow {
+  0% { box-shadow: var(--shadow-sm); }
+  50% { box-shadow: 0 0 0 4px rgba(184, 115, 81, 0.08), var(--shadow-md); }
+  100% { box-shadow: var(--shadow-sm); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Base ── */
+
 @layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -15,114 +67,257 @@
     background-color: var(--color-accent-bg);
     color: var(--color-accent);
   }
+
+  /* Subtle noise texture overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    opacity: 0.015;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-hover);
+  }
 }
 
+/* ── Component Classes ── */
+
 @layer components {
+  /* ── Buttons ── */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2
-      text-sm font-medium text-white transition-colors
-      focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center px-5 py-2.5
+      text-sm font-medium text-white transition-all;
     background-color: var(--color-primary);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
   }
   .btn-primary:hover {
     background-color: var(--color-primary-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
-  .btn-primary:focus {
-    --tw-ring-color: var(--color-primary);
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-glow);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border px-4 py-2
-      text-sm font-medium transition-colors
-      focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center border px-5 py-2.5
+      text-sm font-medium transition-all;
     border-color: var(--color-border);
     color: var(--color-text);
+    background-color: var(--color-surface, #fff);
+    border-radius: var(--radius-md);
   }
   .btn-secondary:hover {
     background-color: var(--color-bg-hover);
+    border-color: var(--color-border-hover);
+    transform: translateY(-1px);
+  }
+  .btn-secondary:active {
+    transform: translateY(0);
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-lg px-3 py-2
-      text-sm font-medium transition-colors;
+    @apply inline-flex items-center justify-center px-3 py-2
+      text-sm font-medium transition-all;
     color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
   }
   .btn-ghost:hover {
     background-color: var(--color-bg-hover);
     color: var(--color-text);
   }
 
+  /* ── Inputs ── */
   .input {
-    @apply w-full rounded-lg border px-3 py-2 text-sm transition-colors
-      placeholder:text-text-tertiary
-      focus:outline-none focus:ring-2;
-    border-color: var(--color-border);
-    background-color: var(--color-bg);
+    @apply w-full px-4 py-2.5 text-sm transition-all;
+    border: 1.5px solid var(--color-border);
+    background-color: var(--color-surface, #fff);
     color: var(--color-text);
+    border-radius: var(--radius-md);
+  }
+  .input::placeholder {
+    color: var(--color-text-tertiary);
   }
   .input:hover {
     border-color: var(--color-border-hover);
   }
   .input:focus {
+    outline: none;
     border-color: var(--color-primary);
-    --tw-ring-color: var(--color-accent-bg);
+    box-shadow: var(--shadow-glow);
   }
 
+  /* ── Cards ── */
   .card {
-    @apply rounded-xl border p-5 transition-shadow;
-    border-color: var(--color-border);
-    background-color: var(--color-bg);
+    @apply p-5 transition-all;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface, #fff);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
   .card:hover {
-    @apply shadow-sm;
+    box-shadow: var(--shadow-md);
     border-color: var(--color-border-hover);
+    transform: translateY(-2px);
   }
 
+  /* ── Tags ── */
   .tag {
-    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors;
+    @apply inline-flex items-center px-2.5 py-1 text-xs font-medium transition-all;
     background-color: var(--color-accent-bg);
     color: var(--color-accent);
+    border-radius: var(--radius-sm);
   }
   .tag:hover {
     filter: brightness(0.95);
+    transform: scale(1.03);
+  }
+
+  /* ── Skeleton shimmer ── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-secondary) 25%,
+      var(--color-bg-hover) 50%,
+      var(--color-bg-secondary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── Fade-in animation helper ── */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s var(--ease-out) both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s var(--ease-out) both;
+  }
+  .animate-slide-in-down {
+    animation: slideInDown 0.4s var(--ease-out) both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.3s var(--ease-spring) both;
+  }
+  .animate-warm-glow {
+    animation: warmGlow 1.5s ease-in-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s var(--ease-out) both;
   }
 }
 
-/* Markdown content styles */
-.prose h1 { @apply text-2xl font-bold mt-6 mb-3; }
-.prose h2 { @apply text-xl font-semibold mt-5 mb-2; }
-.prose h3 { @apply text-lg font-medium mt-4 mb-2; }
-.prose p { @apply my-2 leading-relaxed; }
-.prose ul { @apply list-disc pl-6 my-2; }
-.prose ol { @apply list-decimal pl-6 my-2; }
-.prose li { @apply my-1; }
+/* ── Markdown / Prose ── */
+
+.prose h1 {
+  @apply text-2xl font-bold mt-8 mb-4;
+  font-family: "Lora", "Noto Serif SC", serif;
+  color: var(--color-text);
+}
+.prose h2 {
+  @apply text-xl font-semibold mt-6 mb-3;
+  font-family: "Lora", "Noto Serif SC", serif;
+  color: var(--color-text);
+}
+.prose h3 {
+  @apply text-lg font-medium mt-5 mb-2;
+  font-family: "Lora", "Noto Serif SC", serif;
+  color: var(--color-text);
+}
+.prose p {
+  @apply my-3 leading-relaxed;
+  color: var(--color-text);
+}
+.prose ul { @apply list-disc pl-6 my-3; }
+.prose ol { @apply list-decimal pl-6 my-3; }
+.prose li { @apply my-1.5 leading-relaxed; }
 .prose blockquote {
-  @apply border-l-4 pl-4 my-3 italic;
-  border-color: var(--color-border);
+  @apply border-l-4 pl-5 my-4 italic;
+  border-color: var(--color-primary-light, var(--color-border));
   color: var(--color-text-secondary);
+  background-color: var(--color-accent-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.75rem 1.25rem;
 }
 .prose code {
   @apply rounded px-1.5 py-0.5 text-sm;
   background-color: var(--color-bg-secondary);
+  color: var(--color-primary);
 }
 .prose pre {
-  @apply rounded-lg p-4 my-3 overflow-x-auto text-sm;
+  @apply my-4 overflow-x-auto text-sm;
   background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
 }
 .prose pre code {
   @apply bg-transparent p-0;
+  color: var(--color-text);
 }
 .prose a {
   color: var(--color-primary);
-  @apply underline;
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-light, var(--color-primary));
+  text-underline-offset: 2px;
+  transition: all 0.2s;
 }
 .prose a:hover {
   color: var(--color-primary-hover);
+  text-decoration-color: var(--color-primary-hover);
 }
 .prose hr {
-  @apply my-6;
+  @apply my-8;
   border-color: var(--color-border);
 }
-.prose table { @apply w-full my-3 text-sm; }
-.prose th { @apply border-b-2 px-3 py-2 text-left font-semibold; border-color: var(--color-border); }
-.prose td { @apply border-b px-3 py-2; border-color: var(--color-border); }
+.prose table { @apply w-full my-4 text-sm; }
+.prose th {
+  @apply border-b-2 px-3 py-2 text-left font-semibold;
+  border-color: var(--color-border);
+}
+.prose td {
+  @apply border-b px-3 py-2;
+  border-color: var(--color-border);
+}
+.prose img {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── TipTap Editor Placeholder ── */
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--color-text-tertiary);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

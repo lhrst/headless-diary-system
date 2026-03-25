@@ -56,11 +56,27 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`px-2 py-1 rounded text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-        active
-          ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100"
-          : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-      }`}
+      className="transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+      style={{
+        padding: "4px 8px",
+        borderRadius: "var(--radius-sm)",
+        fontSize: "13px",
+        fontWeight: 500,
+        color: active ? "var(--color-primary)" : "var(--color-text-tertiary)",
+        backgroundColor: active ? "var(--color-accent-bg)" : "transparent",
+      }}
+      onMouseEnter={(e) => {
+        if (!active && !disabled) {
+          e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          e.currentTarget.style.color = "var(--color-text-secondary)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.color = "var(--color-text-tertiary)";
+        }
+      }}
     >
       {children}
     </button>
@@ -70,7 +86,16 @@ function ToolbarButton({
 /* ── Toolbar Divider ── */
 
 function Divider() {
-  return <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 mx-1" />;
+  return (
+    <div
+      className="mx-1"
+      style={{
+        width: 1,
+        height: 16,
+        backgroundColor: "var(--color-border)",
+      }}
+    />
+  );
 }
 
 /* ── Toolbar ── */
@@ -91,15 +116,20 @@ function Toolbar({
     if (file && onFileUpload) {
       onFileUpload(file);
     }
-    // Reset so the same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-neutral-200 dark:border-neutral-700 px-2 py-1 sticky top-0 bg-white dark:bg-neutral-900 z-10">
-      {/* ── Text Format ── */}
+    <div
+      className="flex flex-wrap items-center gap-0.5 px-3 py-2 sticky top-0 z-10"
+      style={{
+        borderBottom: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-surface, #fff)",
+        borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
+      }}
+    >
       <ToolbarButton
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -134,7 +164,6 @@ function Toolbar({
 
       <Divider />
 
-      {/* ── Headings ── */}
       <ToolbarButton
         active={editor.isActive("heading", { level: 1 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -161,13 +190,15 @@ function Toolbar({
 
       <Divider />
 
-      {/* ── Lists ── */}
       <ToolbarButton
         active={editor.isActive("bulletList")}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         title="无序列表"
       >
-        <span className="text-base leading-none">•≡</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" />
+          <circle cx="3" cy="6" r="1" fill="currentColor" /><circle cx="3" cy="12" r="1" fill="currentColor" /><circle cx="3" cy="18" r="1" fill="currentColor" />
+        </svg>
       </ToolbarButton>
 
       <ToolbarButton
@@ -175,28 +206,23 @@ function Toolbar({
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         title="有序列表"
       >
-        <span className="text-xs leading-none">1.</span>
-      </ToolbarButton>
-
-      <ToolbarButton
-        onClick={() => {
-          // Insert a task-list-like checkbox line using text
-          editor.chain().focus().insertContent("- [ ] ").run();
-        }}
-        title="任务列表"
-      >
-        <span className="text-xs leading-none">☑</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="10" x2="21" y1="6" y2="6" /><line x1="10" x2="21" y1="12" y2="12" /><line x1="10" x2="21" y1="18" y2="18" />
+          <path d="M4 6h1v4" /><path d="M4 10h2" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+        </svg>
       </ToolbarButton>
 
       <Divider />
 
-      {/* ── Block ── */}
       <ToolbarButton
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         title="引用块"
       >
-        <span className="text-base leading-none">&ldquo;</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
+          <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" />
+        </svg>
       </ToolbarButton>
 
       <ToolbarButton
@@ -204,26 +230,31 @@ function Toolbar({
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         title="代码块"
       >
-        {"</>"}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+        </svg>
       </ToolbarButton>
 
       <ToolbarButton
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
         title="分隔线"
       >
-        ―
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="2" y1="12" x2="22" y2="12" />
+        </svg>
       </ToolbarButton>
 
       <Divider />
 
-      {/* ── Insert / Upload ── */}
       {onFileUpload && (
         <>
           <ToolbarButton
             onClick={() => fileInputRef.current?.click()}
             title="上传图片/文件"
           >
-            <span className="text-sm">📎</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
           </ToolbarButton>
           <input
             ref={fileInputRef}
@@ -236,13 +267,14 @@ function Toolbar({
         </>
       )}
 
-      {/* ── Undo / Redo ── */}
       <ToolbarButton
         disabled={!editor.can().undo()}
         onClick={() => editor.chain().focus().undo().run()}
         title="撤销 (⌘Z)"
       >
-        ↩
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+        </svg>
       </ToolbarButton>
 
       <ToolbarButton
@@ -250,7 +282,9 @@ function Toolbar({
         onClick={() => editor.chain().focus().redo().run()}
         title="重做 (⌘⇧Z)"
       >
-        ↪
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 7v6h-6" /><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+        </svg>
       </ToolbarButton>
     </div>
   );
@@ -268,17 +302,45 @@ function Footer({
   if (!editor) return null;
 
   const text = editor.state.doc.textContent;
-  // Count CJK characters individually, split latin words by spaces
   const cjkCount = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
   const nonCjkText = text.replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g, " ");
   const wordCount = nonCjkText.split(/\s+/).filter(Boolean).length;
   const total = cjkCount + wordCount;
 
   return (
-    <div className="flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500 px-3 py-1.5 border-t border-neutral-200 dark:border-neutral-700">
+    <div
+      className="flex items-center justify-between px-4 py-2"
+      style={{
+        borderTop: "1px solid var(--color-border)",
+        color: "var(--color-text-tertiary)",
+        fontSize: "12px",
+      }}
+    >
       <span>{total} 字</span>
       {showSubmitHint && (
-        <span className="select-none">⌘Enter 发布</span>
+        <span className="select-none" style={{ opacity: 0.6 }}>
+          <kbd
+            className="mx-0.5 inline-flex h-5 items-center rounded px-1"
+            style={{
+              backgroundColor: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border)",
+              fontSize: "10px",
+            }}
+          >
+            ⌘
+          </kbd>
+          <kbd
+            className="mx-0.5 inline-flex h-5 items-center rounded px-1"
+            style={{
+              backgroundColor: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border)",
+              fontSize: "10px",
+            }}
+          >
+            Enter
+          </kbd>
+          <span className="ml-1">发布</span>
+        </span>
       )}
     </div>
   );
@@ -286,13 +348,10 @@ function Footer({
 
 /* ── Markdown helpers ── */
 
-/** Convert HTML to a simple markdown string (basic conversion). */
 export function htmlToMarkdown(html: string): string {
   let md = html;
-  // Strikethrough
   md = md.replace(/<s>(.*?)<\/s>/gi, "~~$1~~");
   md = md.replace(/<del>(.*?)<\/del>/gi, "~~$1~~");
-  // Horizontal rule
   md = md.replace(/<hr\s*\/?>/gi, "\n---\n");
   md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n\n");
   md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n\n");
@@ -311,29 +370,19 @@ export function htmlToMarkdown(html: string): string {
   return md;
 }
 
-/** Convert basic markdown to HTML for TipTap import. */
 export function markdownToHtml(md: string): string {
   let html = md;
-  // Code blocks first
   html = html.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
-  // Horizontal rule
   html = html.replace(/^---$/gm, "<hr>");
-  // Headings
   html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
   html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
   html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  // Strikethrough
   html = html.replace(/~~(.+?)~~/g, "<s>$1</s>");
-  // Bold & italic
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  // Blockquote
   html = html.replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>");
-  // Inline code
   html = html.replace(/`(.+?)`/g, "<code>$1</code>");
-  // List items
   html = html.replace(/^- (.+)$/gm, "<li>$1</li>");
-  // Paragraphs — wrap remaining lines
   html = html
     .split("\n\n")
     .map((block) => {
@@ -356,18 +405,15 @@ export default function Editor({
   placeholder,
   className,
 }: EditorProps) {
-  // Use ref so the extension always calls the latest onSubmit without re-creating
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
 
-  // Tag autocomplete state
   const [tagQuery, setTagQuery] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<TagSuggestItem[]>([]);
   const [showTagPopup, setShowTagPopup] = useState(false);
   const tagDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hashRangeRef = useRef<{ from: number; to: number } | null>(null);
 
-  // Fetch tag suggestions with debounce
   useEffect(() => {
     if (!showTagPopup || !tagQuery) {
       setTagSuggestions([]);
@@ -401,7 +447,7 @@ export default function Editor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-neutral dark:prose-invert max-w-none px-4 py-3 min-h-[200px] focus:outline-none",
+          "prose prose-neutral max-w-none px-5 py-4 min-h-[200px] focus:outline-none",
       },
       handleKeyDown: (_view, event) => {
         if (event.key === "Escape" && showTagPopup) {
@@ -437,14 +483,12 @@ export default function Editor({
     onUpdate: ({ editor: ed }) => {
       onChange?.(ed.getHTML());
 
-      // Tag autocomplete detection
       const cursorPos = ed.state.selection.from;
       const textBeforeCursor = ed.state.doc.textBetween(0, cursorPos);
       const hashMatch = textBeforeCursor.match(/#([\w\u4e00-\u9fff]*)$/);
       if (hashMatch) {
         setTagQuery(hashMatch[1]);
         setShowTagPopup(true);
-        // Store the range of #query for replacement
         const from = cursorPos - hashMatch[0].length;
         hashRangeRef.current = { from, to: cursorPos };
       } else {
@@ -468,7 +512,6 @@ export default function Editor({
     [editor],
   );
 
-  // Update content if initialContent changes externally
   const setContent = useCallback(
     (content: string) => {
       if (editor && content !== editor.getHTML()) {
@@ -482,13 +525,29 @@ export default function Editor({
     if (initialContent !== undefined) {
       setContent(initialContent);
     }
-    // Only run when initialContent changes, not on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContent]);
 
   return (
     <div
-      className={`relative border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 overflow-visible ${className ?? ""}`}
+      className={`relative overflow-visible transition-all ${className ?? ""}`}
+      style={{
+        border: "1.5px solid var(--color-border)",
+        borderRadius: "var(--radius-lg)",
+        backgroundColor: "var(--color-surface, #fff)",
+      }}
+      onFocus={(e) => {
+        const el = e.currentTarget;
+        el.style.borderColor = "var(--color-primary)";
+        el.style.boxShadow = "var(--shadow-glow)";
+      }}
+      onBlur={(e) => {
+        const el = e.currentTarget;
+        if (!el.contains(e.relatedTarget as Node)) {
+          el.style.borderColor = "var(--color-border)";
+          el.style.boxShadow = "none";
+        }
+      }}
     >
       <Toolbar editor={editor} onFileUpload={onFileUpload} />
       <EditorContent editor={editor} />
@@ -497,20 +556,33 @@ export default function Editor({
       {/* Tag autocomplete popup */}
       {showTagPopup && tagSuggestions.length > 0 && (
         <div
-          className="absolute left-4 right-4 z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
-          style={{ bottom: "3rem" }}
+          className="absolute left-4 right-4 z-50 mt-1 max-h-56 overflow-y-auto animate-scale-in"
+          style={{
+            bottom: "3rem",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface, #fff)",
+            boxShadow: "var(--shadow-lg)",
+          }}
         >
           {tagSuggestions.map((s) => (
             <button
               key={s.tag}
               type="button"
-              className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+              className="flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors"
+              style={{ color: "var(--color-text)" }}
               onMouseDown={(e) => {
-                e.preventDefault(); // prevent editor blur
+                e.preventDefault();
                 handleSelectTag(s.tag);
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <span style={{ color: "var(--color-text)" }}>#{s.tag}</span>
+              <span>#{s.tag}</span>
               <span
                 className="text-xs"
                 style={{ color: "var(--color-text-tertiary)" }}
@@ -525,5 +597,4 @@ export default function Editor({
   );
 }
 
-/** Export the markdown helpers together with the component for convenience. */
 export { markdownToHtml as importMarkdown, htmlToMarkdown as exportMarkdown };

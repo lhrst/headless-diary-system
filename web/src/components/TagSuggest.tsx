@@ -77,7 +77,7 @@ export default function TagSuggest({
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (activeIndex < suggestions.length) {
-          onSelect(suggestions[activeIndex].name);
+          onSelect(suggestions[activeIndex].tag);
         } else {
           onCreate(query);
         }
@@ -112,16 +112,16 @@ export default function TagSuggest({
       <ul className="py-1">
         {suggestions.map((tag, idx) => (
           <li
-            key={tag.name}
+            key={tag.tag}
             className={`flex items-center justify-between px-3 py-1.5 cursor-pointer text-sm ${
               idx === activeIndex
                 ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
                 : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
             }`}
             onMouseEnter={() => setActiveIndex(idx)}
-            onClick={() => onSelect(tag.name)}
+            onClick={() => onSelect(tag.tag)}
           >
-            <span className="truncate">#{tag.name}</span>
+            <span className="truncate">#{tag.tag}</span>
             <span className="ml-2 text-xs text-neutral-400 shrink-0">
               {tag.count} 次
             </span>
