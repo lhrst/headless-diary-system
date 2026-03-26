@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { DiaryBrief } from "@/lib/types";
+import { getDiary } from "@/lib/api";
 
 function formatRelativeDate(iso: string): string {
   const now = Date.now();
@@ -23,6 +26,10 @@ function formatRelativeDate(iso: string): string {
   });
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, "").trim();
+}
+
 interface DiaryCardProps {
   diary: DiaryBrief;
   index?: number;
@@ -31,6 +38,9 @@ interface DiaryCardProps {
 
 export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const [fullContent, setFullContent] = useState<string | null>(null);
+  const [loadingContent, setLoadingContent] = useState(false);
 
   const weatherInfo =
     diary.weather_icon || diary.weather
@@ -44,123 +54,210 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
     : null;
 
   const isPlaceholder = diary.id.startsWith("temp-");
+  const cleanPreview = stripHtml(diary.preview);
+
+  const handleExpand = async () => {
+    if (isPlaceholder) return;
+    if (!expanded && fullContent === null) {
+      setLoadingContent(true);
+      try {
+        const detail = await getDiary(diary.id);
+        setFullContent(detail.content);
+      } catch {
+        setFullContent(cleanPreview);
+      } finally {
+        setLoadingContent(false);
+      }
+    }
+    setExpanded(!expanded);
+  };
 
   return (
-    <Link href={isPlaceholder ? "#" : `/diary/${diary.id}`} className="block">
-      <article
-        className={`card cursor-pointer group ${isNew ? "animate-warm-glow" : "animate-fade-in-up"}`}
-        style={{
-          animationDelay: isNew ? "0ms" : `${index * 60}ms`,
-          opacity: isPlaceholder ? 0.7 : undefined,
-        }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h3
-              className={`font-serif text-base font-semibold leading-snug ${isPlaceholder ? "skeleton h-5 w-2/3" : ""}`}
-              style={{ color: "var(--color-text)" }}
-            >
-              {isPlaceholder ? "\u00A0" : diary.title || "无标题"}
-            </h3>
-            <p
-              className="mt-1.5 line-clamp-2 text-sm leading-relaxed"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              {diary.preview}
-            </p>
-          </div>
-
-          {/* Date badge on the right */}
-          <div
-            className="shrink-0 text-right"
-            style={{ color: "var(--color-text-tertiary)" }}
+    <article
+      className={`card ${isNew ? "animate-warm-glow" : "animate-fade-in-up"}`}
+      style={{
+        animationDelay: isNew ? "0ms" : `${index * 60}ms`,
+        opacity: isPlaceholder ? 0.7 : undefined,
+      }}
+    >
+      {/* Header: title + time + actions */}
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className="min-w-0 flex-1 cursor-pointer"
+          onClick={handleExpand}
+        >
+          <h3
+            className={`font-serif text-base font-semibold leading-snug ${isPlaceholder ? "skeleton h-5 w-2/3" : ""}`}
+            style={{ color: "var(--color-text)" }}
           >
-            <span className="text-xs font-medium">
-              {formatRelativeDate(diary.created_at)}
-            </span>
-          </div>
+            {isPlaceholder ? "\u00A0" : diary.title || "无标题"}
+          </h3>
         </div>
 
-        {/* Bottom row: tags + meta */}
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {diary.tags.slice(0, 4).map((t) => {
-              const isAi = diary.ai_tags?.includes(t);
-              return (
-                <span
-                  key={t}
-                  className="tag cursor-pointer"
-                  style={
-                    isAi ? { opacity: 0.7 } : undefined
-                  }
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    router.push(`/tags/${encodeURIComponent(t)}`);
-                  }}
-                >
-                  {isAi && (
-                    <svg
-                      className="mr-0.5 -mt-px inline-block"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                    </svg>
-                  )}
-                  {t}
-                </span>
-              );
-            })}
-            {diary.tags.length > 4 && (
-              <span
-                className="text-xs"
+        <div className="shrink-0 flex items-center gap-2">
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            {formatRelativeDate(diary.created_at)}
+          </span>
+          {/* Edit + Expand buttons */}
+          {!isPlaceholder && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/diary/${diary.id}/edit`);
+                }}
+                className="btn-ghost p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="编辑"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                +{diary.tags.length - 4}
-              </span>
-            )}
-          </div>
-
-          <div
-            className="shrink-0 flex items-center gap-1.5 text-xs"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            {weatherInfo && <span>{weatherInfo}</span>}
-            {addressShort && (
-              <>
-                {weatherInfo && <span className="opacity-40">·</span>}
-                <span>{addressShort}</span>
-              </>
-            )}
-          </div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Placeholder shimmer bar for pending title */}
-        {isPlaceholder && (
-          <div className="mt-3 flex items-center gap-2">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{
-                backgroundColor: "var(--color-primary)",
-                animation: "gentlePulse 1.5s infinite",
-              }}
-            />
-            <span
-              className="text-xs"
-              style={{ color: "var(--color-text-tertiary)" }}
+      {/* Preview / Expanded content */}
+      <div className="cursor-pointer" onClick={handleExpand}>
+        {!expanded ? (
+          <p
+            className="mt-1.5 line-clamp-3 text-sm leading-relaxed"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            {cleanPreview}
+          </p>
+        ) : (
+          <div className="mt-3 animate-fade-in">
+            {loadingContent ? (
+              <div className="space-y-2">
+                <div className="skeleton h-4 w-full" />
+                <div className="skeleton h-4 w-4/5" />
+                <div className="skeleton h-4 w-3/5" />
+              </div>
+            ) : fullContent ? (
+              <div className="prose text-sm">
+                {fullContent.includes("<p>") || fullContent.includes("<h") ? (
+                  <div dangerouslySetInnerHTML={{ __html: fullContent }} />
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {fullContent}
+                  </ReactMarkdown>
+                )}
+              </div>
+            ) : null}
+
+            {/* Action bar when expanded */}
+            <div
+              className="mt-4 pt-3 flex items-center justify-between"
+              style={{ borderTop: "1px solid var(--color-border)" }}
             >
-              AI 正在生成标题...
-            </span>
+              <button
+                className="text-xs font-medium transition-colors"
+                style={{ color: "var(--color-text-tertiary)" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded(false);
+                }}
+              >
+                收起
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn-ghost text-xs"
+                  style={{ color: "var(--color-text-secondary)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/diary/${diary.id}`);
+                  }}
+                >
+                  详情
+                </button>
+                <button
+                  className="btn-primary text-xs"
+                  style={{ padding: "4px 12px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/diary/${diary.id}/edit`);
+                  }}
+                >
+                  编辑
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </article>
-    </Link>
+      </div>
+
+      {/* Tags + meta */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {diary.tags.slice(0, 4).map((t) => {
+            const isAi = diary.ai_tags?.includes(t);
+            return (
+              <span
+                key={t}
+                className="tag cursor-pointer"
+                style={isAi ? { opacity: 0.7 } : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/tags/${encodeURIComponent(t)}`);
+                }}
+              >
+                {isAi && (
+                  <svg
+                    className="mr-0.5 -mt-px inline-block"
+                    width="10" height="10" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                  </svg>
+                )}
+                {t}
+              </span>
+            );
+          })}
+          {diary.tags.length > 4 && (
+            <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+              +{diary.tags.length - 4}
+            </span>
+          )}
+        </div>
+
+        <div
+          className="shrink-0 flex items-center gap-1.5 text-xs"
+          style={{ color: "var(--color-text-tertiary)" }}
+        >
+          {weatherInfo && <span>{weatherInfo}</span>}
+          {addressShort && (
+            <>
+              {weatherInfo && <span className="opacity-40">·</span>}
+              <span>{addressShort}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Placeholder */}
+      {isPlaceholder && (
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: "var(--color-primary)",
+              animation: "gentlePulse 1.5s infinite",
+            }}
+          />
+          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+            AI 正在生成标题...
+          </span>
+        </div>
+      )}
+    </article>
   );
 }
