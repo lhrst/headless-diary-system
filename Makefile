@@ -36,6 +36,5 @@ backup-light:
 	rm backup-db.sql
 
 deploy-to:
-	rsync -avz --exclude='data/postgres' ./ $(SERVER):$(HOST)/
-	rsync -avz data/ $(SERVER):$(HOST)/data/
-	ssh $(SERVER) "cd $(HOST) && docker compose up -d --build"
+	rsync -avz --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='.next/' --exclude='__pycache__/' --exclude='.git/' ./ $(SERVER):$(HOST)/
+	ssh $(SERVER) "cd $(HOST) && docker compose build && docker compose up -d --force-recreate"
