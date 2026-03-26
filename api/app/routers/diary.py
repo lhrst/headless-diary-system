@@ -458,6 +458,23 @@ async def update_diary(
             detail="Only the owner can update this entry",
         )
 
+    # Save current version as history before editing
+    from app.models.version import DiaryVersion
+    old_content = entry.raw_text or ""
+    try:
+        from app.utils.file_storage import read_diary_file
+        old_content = read_diary_file(entry.content_path, settings.DIARY_STORAGE_PATH)
+    except Exception:
+        pass
+    old_tags = ",".join([t.tag for t in entry.tags])
+    old_title = entry.manual_title or entry.auto_title or ""
+    db.add(DiaryVersion(
+        entry_id=entry.id,
+        title=old_title,
+        content=old_content,
+        tags=old_tags,
+    ))
+
     if body.manual_title is not None:
         entry.manual_title = body.manual_title
     if body.content is not None:
@@ -519,6 +536,32 @@ async def delete_diary(
 
     await db.delete(entry)
     await db.flush()
+
+
+@router.get("/{entry_id}/versions")
+async def get_versions(
+    entry_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get edit history for a diary entry."""
+    from app.models.version import DiaryVersion
+    result = await db.execute(
+        select(DiaryVersion)
+        .where(DiaryVersion.entry_id == entry_id)
+        .order_by(DiaryVersion.created_at.desc())
+    )
+    versions = result.scalars().all()
+    return [
+        {
+            "id": str(v.id),
+            "title": v.title,
+            "content": v.content,
+            "tags": v.tags.split(",") if v.tags else [],
+            "created_at": v.created_at.isoformat(),
+        }
+        for v in versions
+    ]
 
 
 @router.get("/{entry_id}/references", response_model=list[ReferenceInfo])

@@ -74,3 +74,7 @@ class DiaryEntry(Base):
     media: Mapped[list["DiaryMedia"]] = relationship(
         "DiaryMedia", back_populates="entry", lazy="selectin"
     )
+    versions: Mapped[list["DiaryVersion"]] = relationship(
+        "DiaryVersion", back_populates="entry", lazy="noload",
+        cascade="all, delete-orphan", order_by="DiaryVersion.created_at.desc()"
+    )

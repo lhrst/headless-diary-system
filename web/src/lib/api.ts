@@ -228,6 +228,20 @@ export async function removeTagHierarchy(tag: string): Promise<void> {
   });
 }
 
+/* ── Versions (edit history) ── */
+
+export interface DiaryVersion {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  created_at: string;
+}
+
+export async function getDiaryVersions(entryId: string): Promise<DiaryVersion[]> {
+  return fetchApi<DiaryVersion[]>(`/diary/${entryId}/versions`);
+}
+
 /* ── Comments ── */
 
 export async function getComments(entryId: string): Promise<CommentResponse[]> {

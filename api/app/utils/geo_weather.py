@@ -46,7 +46,37 @@ async def get_weather(lat: float, lng: float) -> dict:
 
 
 async def reverse_geocode(lat: float, lng: float) -> str | None:
-    """Reverse geocode using Nominatim (OpenStreetMap, free)."""
+    """Reverse geocode — try multiple providers for China compatibility."""
+    # Try BigDataCloud (free, works in China)
+    try:
+        async with httpx.AsyncClient(proxy=None) as client:
+            resp = await client.get(
+                "https://api.bigdatacloud.net/data/reverse-geocode-client",
+                params={
+                    "latitude": lat,
+                    "longitude": lng,
+                    "localityLanguage": "zh",
+                },
+                timeout=8,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            parts = []
+            city = data.get("city", "")
+            locality = data.get("locality", "")
+            province = data.get("principalSubdivision", "")
+            if province:
+                parts.append(province)
+            if city and city != province:
+                parts.append(city)
+            if locality and locality != city:
+                parts.append(locality)
+            if parts:
+                return " ".join(parts)
+    except Exception:
+        pass
+
+    # Fallback: Nominatim (may not work in China)
     try:
         async with httpx.AsyncClient(proxy=None) as client:
             resp = await client.get(
@@ -59,19 +89,16 @@ async def reverse_geocode(lat: float, lng: float) -> str | None:
                     "accept-language": "zh",
                 },
                 headers={"User-Agent": "HeadlessDiary/1.0"},
-                timeout=10,
+                timeout=5,
             )
             resp.raise_for_status()
             data = resp.json()
             addr = data.get("address", {})
-            # Build address without postcode and country
             parts = []
-            for key in ("road", "neighbourhood", "suburb", "district",
-                        "city_district", "city", "town", "village",
-                        "state", "province"):
+            for key in ("state", "city", "district", "suburb", "road"):
                 val = addr.get(key)
                 if val and val not in parts:
                     parts.append(val)
-            return ", ".join(parts) if parts else data.get("display_name", "")[:500]
+            return " ".join(parts) if parts else None
     except Exception:
         return None

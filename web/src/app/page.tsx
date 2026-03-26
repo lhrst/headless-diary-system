@@ -66,7 +66,7 @@ function HomePageInner() {
   const [activeTag, setActiveTag] = useState(tagParam);
   const [quickContent, setQuickContent] = useState("");
   const [quickTitle, setQuickTitle] = useState("");
-  const [editorExpanded, setEditorExpanded] = useState(false);
+  const [editorExpanded, setEditorExpanded] = useState(true);
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
   const [newDiaryIds, setNewDiaryIds] = useState<Set<string>>(new Set());

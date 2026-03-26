@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/lib/useAuth";
-import { getDiary, deleteDiary } from "@/lib/api";
+import { getDiary, deleteDiary, getDiaryVersions } from "@/lib/api";
 import type { DiaryDetail, CommentResponse } from "@/lib/types";
+import type { DiaryVersion } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import CommentThread from "@/components/CommentThread";
 import AgentStatus from "@/components/AgentStatus";
@@ -53,6 +54,9 @@ export default function DiaryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [versions, setVersions] = useState<DiaryVersion[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<DiaryVersion | null>(null);
 
   useEffect(() => {
     if (!authed) return;
@@ -357,6 +361,105 @@ export default function DiaryDetailPage() {
             {/* Agent tasks */}
             <div className="mb-8">
               <AgentStatus tasks={diary.agent_tasks} />
+            </div>
+
+            {/* Edit history */}
+            <div className="mb-8">
+              <button
+                className="flex items-center gap-2 text-sm font-semibold transition-colors"
+                style={{ color: "var(--color-text-secondary)" }}
+                onClick={() => {
+                  if (!showVersions && versions.length === 0) {
+                    getDiaryVersions(id).then(setVersions).catch(console.error);
+                  }
+                  setShowVersions(!showVersions);
+                  setSelectedVersion(null);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" />
+                </svg>
+                编辑历史
+                <svg
+                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transform: showVersions ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+
+              {showVersions && (
+                <div className="mt-3 animate-slide-up">
+                  {versions.length === 0 ? (
+                    <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+                      暂无编辑记录
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {versions.map((v) => (
+                        <button
+                          key={v.id}
+                          className="w-full text-left p-3 transition-all"
+                          style={{
+                            border: selectedVersion?.id === v.id
+                              ? "1.5px solid var(--color-primary)"
+                              : "1px solid var(--color-border)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: selectedVersion?.id === v.id
+                              ? "var(--color-accent-bg)"
+                              : "var(--color-surface, #fff)",
+                          }}
+                          onClick={() => setSelectedVersion(selectedVersion?.id === v.id ? null : v)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                              {v.title || "无标题"}
+                            </span>
+                            <time className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                              {new Date(v.created_at).toLocaleString("zh-CN", {
+                                month: "short", day: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </time>
+                          </div>
+                          {v.tags.length > 0 && (
+                            <div className="mt-1 flex gap-1">
+                              {v.tags.map((t) => (
+                                <span key={t} className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>#{t}</span>
+                              ))}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Show selected version content */}
+                  {selectedVersion && (
+                    <div
+                      className="mt-3 p-4 animate-fade-in"
+                      style={{
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "var(--radius-md)",
+                        backgroundColor: "var(--color-bg-secondary)",
+                      }}
+                    >
+                      <p className="text-xs mb-2" style={{ color: "var(--color-text-tertiary)" }}>
+                        历史版本内容：
+                      </p>
+                      <div className="prose text-sm">
+                        {selectedVersion.content.includes("<p>") ? (
+                          <div dangerouslySetInnerHTML={{ __html: selectedVersion.content }} />
+                        ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {selectedVersion.content}
+                          </ReactMarkdown>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Comments */}
