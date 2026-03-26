@@ -2,11 +2,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps for media processing
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libheif-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Use Chinese pip mirror for faster downloads
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # Install Python deps
 COPY pyproject.toml .

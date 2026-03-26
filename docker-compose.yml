@@ -60,7 +60,10 @@ services:
       - diary-net
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     env_file: .env
     depends_on:
       - api

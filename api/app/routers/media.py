@@ -145,7 +145,7 @@ async def upload_media(
                     f"{_s.OPENROUTER_BASE_URL}/chat/completions",
                     headers={"Authorization": f"Bearer {_s.OPENROUTER_API_KEY}", "Content-Type": "application/json"},
                     json={
-                        "model": "google/gemini-2.0-flash-001",
+                        "model": settings.LLM_MODEL_FAST,
                         "messages": [{"role": "user", "content": [
                             {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}},
                             {"type": "text", "text": "Describe this image concisely for a personal diary. Include: what's shown, any readable text (OCR), notable details. Respond in Chinese. Format:\nDescription: (1-2 sentences)\nText in image: (any readable text, or 'None')\nTags: (3-5 suggested tags, comma-separated)"},
@@ -393,7 +393,7 @@ async def recaption_media(
                     f"{_s.OPENROUTER_BASE_URL}/chat/completions",
                     headers={"Authorization": f"Bearer {_s.OPENROUTER_API_KEY}", "Content-Type": "application/json"},
                     json={
-                        "model": "google/gemini-2.0-flash-001",
+                        "model": settings.LLM_MODEL_FAST,
                         "messages": [{"role": "user", "content": [
                             {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}},
                             {"type": "text", "text": "Describe this image concisely for a diary. Include readable text. Respond in Chinese.\nDescription: (1-2 sentences)\nText in image: (any readable text, or 'None')\nTags: (3-5 tags)"},

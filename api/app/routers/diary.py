@@ -197,7 +197,7 @@ async def create_diary(
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "anthropic/claude-3.5-haiku",
+                    "model": settings.LLM_MODEL_FAST,
                     "messages": [{"role": "user", "content": _TITLE_PROMPT}],
                     "max_tokens": 50,
                 },
@@ -247,7 +247,7 @@ async def create_diary(
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": "google/gemini-2.0-flash-001",
+                        "model": settings.LLM_MODEL_FAST,
                         "messages": [{"role": "user", "content": tag_prompt}],
                         "max_tokens": 50,
                     },
@@ -566,7 +566,7 @@ async def batch_generate_titles(
 
     updated = 0
     errors = []
-    CHEAP_MODEL = "google/gemini-2.0-flash-001"
+    CHEAP_MODEL = settings.LLM_MODEL_FAST
 
     for entry in entries:
         try:
@@ -647,7 +647,7 @@ async def batch_generate_tags(
 
     updated = 0
     errors = []
-    CHEAP_MODEL = "google/gemini-2.0-flash-001"
+    CHEAP_MODEL = settings.LLM_MODEL_FAST
 
     for entry in entries:
         try:

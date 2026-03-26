@@ -59,7 +59,7 @@ def caption_photo(self, media_id: str):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "anthropic/claude-3.5-haiku",
+                    "model": settings.LLM_MODEL_FAST,
                     "messages": [{
                         "role": "user",
                         "content": [
@@ -99,7 +99,7 @@ def caption_photo(self, media_id: str):
         media.media_text_status = "done"
         media.media_text_method = "claude-vision"
         media.media_text_metadata = {
-            "model": "claude-haiku-4-5-20251001",
+            "model": settings.LLM_MODEL_FAST,
             "tokens_used": tokens_used,
             "has_ocr": "None" not in result_text.split("Text in image:")[-1][:20] if "Text in image:" in result_text else False,
         }
@@ -245,7 +245,7 @@ def caption_video(self, media_id: str):
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": "anthropic/claude-3.5-haiku",
+                        "model": settings.LLM_MODEL_FAST,
                         "messages": [{
                             "role": "user",
                             "content": [

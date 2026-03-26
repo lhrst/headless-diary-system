@@ -31,7 +31,7 @@ def generate_auto_title(self, entry_id: str):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "anthropic/claude-3.5-haiku",
+                    "model": settings.LLM_MODEL_FAST,
                     "messages": [
                         {
                             "role": "user",
