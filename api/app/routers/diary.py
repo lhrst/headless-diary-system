@@ -35,6 +35,12 @@ router = APIRouter(prefix="/diary", tags=["diary"])
 
 # ── helpers ──────────────────────────────────────────────────────
 
+import re as _re
+_HTML_TAG_RE = _re.compile(r"<[^>]+>")
+
+def _strip_html(text: str) -> str:
+    return _HTML_TAG_RE.sub("", text).strip()
+
 def _entry_title(entry: DiaryEntry) -> str:
     return entry.manual_title or entry.auto_title or "Untitled"
 
@@ -48,7 +54,7 @@ def _entry_title_source(entry: DiaryEntry) -> str:
 
 
 def _entry_to_brief(entry: DiaryEntry) -> DiaryBrief:
-    preview = (entry.raw_text or "")[:120]
+    preview = _strip_html(entry.raw_text or "")[:120]
     return DiaryBrief(
         id=entry.id,
         title=_entry_title(entry),
@@ -175,15 +181,34 @@ async def create_diary(
     for tag_name in tags:
         db.add(DiaryTag(entry_id=entry.id, tag=tag_name.lower()))
 
-    # Parse @agent commands → create agent tasks
+    # Parse @agent commands → create agent tasks and dispatch to Celery
     from app.models.agent_task import AgentTask
     agent_cmds = extract_agent_commands(body.content)
+    agent_task_ids = []
     for cmd in agent_cmds:
-        task = AgentTask(entry_id=entry.id, user_id=current_user.id, command=cmd)
+        # Classify: improvement or chat
+        import re as _re
+        _improvement_kw = _re.compile(r"改进|改善|优化|添加功能|新增|修复|improve|add feature|fix", _re.IGNORECASE)
+        task_type = "improvement" if _improvement_kw.search(cmd) else "chat"
+        task = AgentTask(
+            entry_id=entry.id, user_id=current_user.id,
+            command=cmd, task_type=task_type,
+        )
         db.add(task)
+        await db.flush()
+        await db.refresh(task)
+        agent_task_ids.append(str(task.id))
 
     await db.flush()
     await db.refresh(entry)
+
+    # Dispatch agent tasks to Celery (after flush so IDs are available)
+    for tid in agent_task_ids:
+        try:
+            from app.tasks.agent_tasks import run_agent
+            run_agent.delay(tid)
+        except Exception:
+            pass
 
     # Generate auto-title inline via OpenRouter
     try:
@@ -307,7 +332,7 @@ async def create_diary(
         references_out=[],
         backlinks=[],
         comments=[],
-        agent_tasks=[{"id": str(t.id), "command": cmd, "status": "pending", "created_at": ""} for t, cmd in zip([], agent_cmds)],
+        agent_tasks=[],
         latitude=entry.latitude,
         longitude=entry.longitude,
         address=entry.address,

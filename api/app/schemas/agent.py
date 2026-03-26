@@ -20,8 +20,10 @@ class AgentTaskResponse(BaseModel):
     id: uuid.UUID
     entry_id: uuid.UUID
     command: str
+    task_type: str = "chat"
     status: str
     result: Any | None = None
     error: str | None = None
+    result_comment_id: uuid.UUID | None = None
     created_at: datetime.datetime
     completed_at: datetime.datetime | None = None

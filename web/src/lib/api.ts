@@ -258,6 +258,19 @@ export async function createComment(
   });
 }
 
+/* ── Agent Tasks ── */
+
+export async function getAgentTasksByEntry(entryId: string): Promise<import("./types").AgentTaskResponse[]> {
+  return fetchApi<import("./types").AgentTaskResponse[]>(`/agent/tasks/by-entry/${entryId}`);
+}
+
+export async function dispatchAgentTask(entryId: string, command: string): Promise<import("./types").AgentTaskResponse> {
+  return fetchApi<import("./types").AgentTaskResponse>("/agent/dispatch", {
+    method: "POST",
+    body: JSON.stringify({ entry_id: entryId, command }),
+  });
+}
+
 /* ── Media ── */
 
 export async function uploadMedia(

@@ -1,9 +1,13 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, engine
+from app.database import Base, engine, async_session_factory
+from app.services.agent_user import ensure_agent_user
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -11,6 +15,13 @@ async def lifespan(app: FastAPI):
     # Create tables that don't exist yet (dev convenience; use Alembic in prod)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Ensure the built-in Agent user exists
+    async with async_session_factory() as session:
+        agent = await ensure_agent_user(session)
+        await session.commit()
+        logger.info("Agent user ready: %s (id=%s)", agent.username, agent.id)
+
     yield
 
 

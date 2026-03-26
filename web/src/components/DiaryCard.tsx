@@ -91,13 +91,7 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
                   key={t}
                   className="tag cursor-pointer"
                   style={
-                    isAi
-                      ? {
-                          borderStyle: "dashed",
-                          border: "1px dashed var(--color-primary-light, var(--color-accent))",
-                          opacity: 0.8,
-                        }
-                      : undefined
+                    isAi ? { opacity: 0.7 } : undefined
                   }
                   onClick={(e) => {
                     e.stopPropagation();

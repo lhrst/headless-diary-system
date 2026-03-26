@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import Base
 # Import all models so they are registered with Base.metadata
-from app.models import user, diary, tag, reference, comment, agent_task, media  # noqa: F401
+from app.models import user, diary, tag, reference, comment, agent_task, media, version  # noqa: F401
 
 config = context.config
 

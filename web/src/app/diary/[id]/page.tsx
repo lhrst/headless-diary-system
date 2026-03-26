@@ -51,6 +51,7 @@ export default function DiaryDetailPage() {
 
   const [diary, setDiary] = useState<DiaryDetail | null>(null);
   const [comments, setComments] = useState<CommentResponse[]>([]);
+  const [agentTasks, setAgentTasks] = useState<DiaryDetail["agent_tasks"]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -64,6 +65,7 @@ export default function DiaryDetailPage() {
       .then((d) => {
         setDiary(d);
         setComments(d.comments || []);
+        setAgentTasks(d.agent_tasks || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -231,12 +233,7 @@ export default function DiaryDetailPage() {
                       key={t}
                       className="tag cursor-pointer"
                       style={
-                        isAi
-                          ? {
-                              border: "1px dashed var(--color-primary-light, var(--color-accent))",
-                              opacity: 0.85,
-                            }
-                          : undefined
+                        isAi ? { opacity: 0.7 } : undefined
                       }
                       onClick={() =>
                         router.push(`/tags/${encodeURIComponent(t)}`)
@@ -360,7 +357,7 @@ export default function DiaryDetailPage() {
 
             {/* Agent tasks */}
             <div className="mb-8">
-              <AgentStatus tasks={diary.agent_tasks} />
+              <AgentStatus tasks={agentTasks} />
             </div>
 
             {/* Edit history */}
@@ -466,7 +463,9 @@ export default function DiaryDetailPage() {
             <CommentThread
               entryId={id}
               comments={comments}
+              agentTasks={agentTasks}
               onNewComment={(c) => setComments((prev) => [...prev, c])}
+              onTasksUpdate={(tasks) => setAgentTasks(tasks)}
             />
           </div>
         )}

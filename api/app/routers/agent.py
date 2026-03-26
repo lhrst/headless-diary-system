@@ -90,6 +90,21 @@ async def dispatch_task(
     return task
 
 
+@router.get("/tasks/by-entry/{entry_id}", response_model=list[AgentTaskResponse])
+async def list_tasks_by_entry(
+    entry_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List agent tasks for a specific diary entry (used for polling)."""
+    result = await db.execute(
+        select(AgentTask)
+        .where(AgentTask.entry_id == entry_id, AgentTask.user_id == current_user.id)
+        .order_by(AgentTask.created_at.desc())
+    )
+    return result.scalars().all()
+
+
 @router.post("/retry/{task_id}", response_model=AgentTaskResponse)
 async def retry_task(
     task_id: uuid.UUID,

@@ -25,6 +25,11 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   },
 };
 
+const typeLabels: Record<string, string> = {
+  chat: "对话",
+  improvement: "改进",
+};
+
 export default function AgentStatus({ tasks }: { tasks: AgentTaskResponse[] }) {
   if (!tasks || tasks.length === 0) return null;
 
@@ -41,6 +46,7 @@ export default function AgentStatus({ tasks }: { tasks: AgentTaskResponse[] }) {
       </h3>
       {tasks.map((task, i) => {
         const st = statusConfig[task.status] || statusConfig.pending;
+        const typeLabel = typeLabels[task.task_type] || task.task_type;
         return (
           <div
             key={task.id}
@@ -53,12 +59,27 @@ export default function AgentStatus({ tasks }: { tasks: AgentTaskResponse[] }) {
             }}
           >
             <div className="flex items-center justify-between">
-              <span
-                className="text-sm font-medium"
-                style={{ color: "var(--color-text)" }}
-              >
-                {task.command}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: task.task_type === "improvement"
+                      ? "rgba(196, 148, 58, 0.15)"
+                      : "rgba(94, 138, 94, 0.1)",
+                    color: task.task_type === "improvement"
+                      ? "var(--color-warning, #C4943A)"
+                      : "var(--color-text-tertiary)",
+                  }}
+                >
+                  {typeLabel}
+                </span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  {task.command}
+                </span>
+              </div>
               <span
                 className="flex items-center gap-1.5 text-xs font-medium"
                 style={{ color: st.color }}
@@ -80,14 +101,6 @@ export default function AgentStatus({ tasks }: { tasks: AgentTaskResponse[] }) {
                 {st.label}
               </span>
             </div>
-            {task.result && (
-              <p
-                className="mt-1.5 text-sm leading-relaxed"
-                style={{ color: "var(--color-text-secondary)" }}
-              >
-                {task.result}
-              </p>
-            )}
             {task.error && (
               <p
                 className="mt-1.5 text-sm"

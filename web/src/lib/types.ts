@@ -106,9 +106,11 @@ export interface AgentTaskResponse {
   id: string;
   entry_id: string;
   command: string;
+  task_type: "chat" | "improvement";
   status: "pending" | "running" | "done" | "failed";
   result?: string;
   error?: string;
+  result_comment_id?: string;
   created_at: string;
   completed_at?: string;
 }

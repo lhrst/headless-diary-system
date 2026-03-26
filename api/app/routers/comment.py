@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,12 +11,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
+from app.models.agent_task import AgentTask
 from app.models.comment import DiaryComment
 from app.models.diary import DiaryEntry
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentResponse
 
 router = APIRouter(prefix="/diary", tags=["comments"])
+
+# Pattern: @agent followed by the command text
+_AGENT_CMD_RE = re.compile(r"@agent\s+(.+)", re.DOTALL | re.IGNORECASE)
+
+# Keywords that indicate an "improvement" (code-change) request
+_IMPROVEMENT_KEYWORDS = re.compile(r"改进|改善|优化|添加功能|新增|修复|improve|add feature|fix", re.IGNORECASE)
+
+
+def _classify_command(command: str) -> str:
+    """Return 'improvement' or 'chat' based on command content."""
+    if _IMPROVEMENT_KEYWORDS.search(command):
+        return "improvement"
+    return "chat"
 
 
 @router.post(
@@ -47,6 +62,33 @@ async def add_comment(
     db.add(comment)
     await db.flush()
     await db.refresh(comment)
+
+    # Detect @agent command and auto-dispatch
+    match = _AGENT_CMD_RE.search(body.content)
+    if match:
+        agent_command = match.group(1).strip()
+        task_type = _classify_command(agent_command)
+        task = AgentTask(
+            entry_id=entry_id,
+            user_id=current_user.id,
+            command=agent_command,
+            task_type=task_type,
+            status="pending",
+        )
+        db.add(task)
+        await db.flush()
+        await db.refresh(task)
+
+        # Mark entry as agent-marked
+        entry.is_agent_marked = True
+
+        # Dispatch to Celery
+        try:
+            from app.tasks.agent_tasks import run_agent
+            run_agent.delay(str(task.id))
+        except Exception:
+            pass
+
     return comment
 
 
