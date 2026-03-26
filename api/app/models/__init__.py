@@ -5,6 +5,7 @@ from app.models.media import DiaryMedia
 from app.models.reference import DiaryReference
 from app.models.tag import DiaryTag, TagHierarchy
 from app.models.user import User
+from app.models.version import DiaryVersion
 
 __all__ = [
     "AgentTask",
@@ -13,6 +14,7 @@ __all__ = [
     "DiaryMedia",
     "DiaryReference",
     "DiaryTag",
+    "DiaryVersion",
     "TagHierarchy",
     "User",
 ]
