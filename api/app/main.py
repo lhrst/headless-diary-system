@@ -12,9 +12,19 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables that don't exist yet (dev convenience; use Alembic in prod)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    import asyncio
+
+    # Retry DB connection up to 10 times (handles Docker startup race)
+    for attempt in range(10):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            break
+        except Exception as e:
+            logger.warning("DB connect attempt %d/10 failed: %s", attempt + 1, e)
+            if attempt == 9:
+                raise
+            await asyncio.sleep(2)
 
     # Ensure the built-in Agent user exists
     async with async_session_factory() as session:
