@@ -154,6 +154,13 @@ function TreeNodeItem({
   );
 }
 
+/* ── Retag panel states ── */
+type RetagState =
+  | { step: "idle" }
+  | { step: "confirm"; oldTags: string[] }
+  | { step: "running"; phase: string; message: string; current: number; total: number; taxonomy?: Record<string, string[]> }
+  | { step: "done"; oldTags: string[]; taxonomy: Record<string, string[]>; updated: number; total: number };
+
 export default function TagsPage() {
   const { mounted, authed } = useAuth();
   const router = useRouter();
@@ -163,9 +170,7 @@ export default function TagsPage() {
   const [viewMode, setViewMode] = useState<"cloud" | "tree">("tree");
 
   // Retag state
-  const [retagging, setRetagging] = useState(false);
-  const [retagMessage, setRetagMessage] = useState("");
-  const [retagProgress, setRetagProgress] = useState<{ current: number; total: number } | null>(null);
+  const [retag, setRetag] = useState<RetagState>({ step: "idle" });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
@@ -186,55 +191,54 @@ export default function TagsPage() {
     loadData();
   }, [loadData]);
 
-  // Cleanup polling on unmount
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
-  const handleRetagAll = async () => {
-    if (retagging) return;
-    if (!confirm("这将用 AI 重新设计标签体系并重新标记所有日记。已有的 AI 标签会被替换，手动标签保留。确定继续？")) return;
+  const handleRetagClick = () => {
+    // Snapshot current tags for before/after comparison
+    setRetag({ step: "confirm", oldTags: tags.map((t) => t.tag) });
+  };
 
-    setRetagging(true);
-    setRetagMessage("正在启动...");
-    setRetagProgress(null);
+  const handleRetagConfirm = async () => {
+    const oldTags = retag.step === "confirm" ? retag.oldTags : tags.map((t) => t.tag);
+    setRetag({ step: "running", phase: "starting", message: "正在启动...", current: 0, total: 0 });
 
     try {
       const { task_id } = await startRetagAll();
 
       pollRef.current = setInterval(async () => {
         try {
-          const status = await getRetagStatus(task_id);
-          setRetagMessage(status.message || "处理中...");
+          const s = await getRetagStatus(task_id);
 
-          if (status.current !== undefined && status.total !== undefined) {
-            setRetagProgress({ current: status.current, total: status.total });
+          if (s.state === "PROGRESS") {
+            setRetag({
+              step: "running",
+              phase: s.phase || "tagging",
+              message: s.message || "处理中...",
+              current: s.current || 0,
+              total: s.total || 0,
+              taxonomy: s.taxonomy,
+            });
+          } else if (s.state === "SUCCESS") {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            await loadData();
+            setRetag({
+              step: "done",
+              oldTags,
+              taxonomy: s.taxonomy || {},
+              updated: s.updated || 0,
+              total: s.total || 0,
+            });
+          } else if (s.state === "FAILURE") {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            setRetag({ step: "idle" });
           }
-
-          if (status.state === "SUCCESS" || status.state === "FAILURE") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
-            setRetagging(false);
-            if (status.state === "SUCCESS") {
-              await loadData();
-            }
-            // Keep message visible for a few seconds
-            setTimeout(() => {
-              setRetagMessage("");
-              setRetagProgress(null);
-            }, 5000);
-          }
-        } catch {
-          // Keep polling on transient errors
-        }
+        } catch { /* keep polling */ }
       }, 2000);
     } catch (e) {
       console.error(e);
-      setRetagging(false);
-      setRetagMessage("启动失败");
-      setTimeout(() => setRetagMessage(""), 3000);
+      setRetag({ step: "idle" });
     }
   };
 
@@ -293,32 +297,25 @@ export default function TagsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Retag button */}
-            <button
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all"
-              style={{
-                borderRadius: "var(--radius-md)",
-                backgroundColor: retagging ? "var(--color-bg-secondary)" : "var(--color-accent-bg)",
-                color: retagging ? "var(--color-text-tertiary)" : "var(--color-accent)",
-                opacity: retagging ? 0.7 : 1,
-              }}
-              onClick={handleRetagAll}
-              disabled={retagging}
-            >
-              {retagging ? (
-                <span
-                  className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent"
-                  style={{ animation: "spin 0.6s linear infinite" }}
-                />
-              ) : (
+            {retag.step === "idle" && (
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all"
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: "var(--color-accent-bg)",
+                  color: "var(--color-accent)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-md)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+                onClick={handleRetagClick}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83" />
                 </svg>
-              )}
-              AI 重新标签
-            </button>
+                AI 重新标签
+              </button>
+            )}
 
-            {/* View mode toggle */}
             <div
               className="flex gap-0.5 p-1"
               style={{
@@ -352,37 +349,281 @@ export default function TagsPage() {
           </div>
         </div>
 
-        {/* Retag progress */}
-        {retagMessage && (
+        {/* ── Retag: Confirm panel ── */}
+        {retag.step === "confirm" && (
           <div
-            className="mb-6 p-4 animate-fade-in"
+            className="mb-6 overflow-hidden animate-fade-in"
             style={{
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-lg)",
+              border: "1.5px solid var(--color-primary)",
               backgroundColor: "var(--color-surface, #fff)",
+              boxShadow: "var(--shadow-glow)",
             }}
           >
-            <p className="text-sm mb-2" style={{ color: "var(--color-text-secondary)" }}>
-              {retagMessage}
-            </p>
-            {retagProgress && retagProgress.total > 0 && (
+            <div className="p-5">
+              <div className="flex items-start gap-3 mb-4">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: "var(--color-accent-bg)" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1" style={{ color: "var(--color-text)" }}>
+                    AI 智能重新标签
+                  </h3>
+                  <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+                    AI 将分析所有日记内容，设计一套层次化的标签体系，并重新标记每篇日记。
+                  </p>
+                </div>
+              </div>
+
               <div
-                className="h-2 w-full overflow-hidden"
+                className="mb-4 p-3 text-xs"
                 style={{
-                  borderRadius: "var(--radius-sm)",
+                  borderRadius: "var(--radius-md)",
                   backgroundColor: "var(--color-bg-secondary)",
+                  color: "var(--color-text-secondary)",
                 }}
               >
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{
-                    width: `${Math.round((retagProgress.current / retagProgress.total) * 100)}%`,
-                    backgroundColor: "var(--color-primary)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                />
+                <p className="mb-1 font-medium" style={{ color: "var(--color-text)" }}>当前标签（{retag.oldTags.length} 个）</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {retag.oldTags.slice(0, 20).map((t) => (
+                    <span key={t} className="tag text-xs">{t}</span>
+                  ))}
+                  {retag.oldTags.length > 20 && (
+                    <span className="text-xs opacity-50">+{retag.oldTags.length - 20} 个</span>
+                  )}
+                </div>
               </div>
-            )}
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="btn-secondary text-sm"
+                  onClick={() => setRetag({ step: "idle" })}
+                >
+                  取消
+                </button>
+                <button
+                  className="btn-primary text-sm"
+                  onClick={handleRetagConfirm}
+                >
+                  开始重新标签
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Retag: Running panel ── */}
+        {retag.step === "running" && (
+          <div
+            className="mb-6 overflow-hidden animate-fade-in"
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1.5px solid var(--color-primary)",
+              backgroundColor: "var(--color-surface, #fff)",
+              boxShadow: "var(--shadow-glow)",
+            }}
+          >
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className="inline-block h-5 w-5 rounded-full border-2 border-t-transparent"
+                  style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }}
+                />
+                <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                  {retag.message}
+                </p>
+              </div>
+
+              {/* Progress bar */}
+              {retag.total > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--color-text-tertiary)" }}>
+                    <span>{retag.phase === "taxonomy" ? "设计标签体系" : "标记日记"}</span>
+                    <span>{retag.current}/{retag.total}</span>
+                  </div>
+                  <div
+                    className="h-2 w-full overflow-hidden"
+                    style={{ borderRadius: 99, backgroundColor: "var(--color-bg-secondary)" }}
+                  >
+                    <div
+                      className="h-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.round((retag.current / retag.total) * 100)}%`,
+                        backgroundColor: "var(--color-primary)",
+                        borderRadius: 99,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Show taxonomy preview as it's designed */}
+              {retag.taxonomy && Object.keys(retag.taxonomy).length > 0 && (
+                <div
+                  className="p-3 animate-fade-in"
+                  style={{
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "var(--color-bg-secondary)",
+                  }}
+                >
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--color-text)" }}>
+                    设计的标签体系
+                  </p>
+                  {Object.entries(retag.taxonomy).map(([parent, children], i) => (
+                    <div key={parent} className="mb-2 last:mb-0 animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
+                      <span className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>
+                        {parent}
+                      </span>
+                      <div className="flex flex-wrap gap-1 mt-1 ml-4">
+                        {children.map((c, j) => (
+                          <span
+                            key={c}
+                            className="tag text-xs animate-fade-in-up"
+                            style={{ animationDelay: `${i * 100 + j * 50}ms` }}
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Retag: Done panel ── */}
+        {retag.step === "done" && (
+          <div
+            className="mb-6 overflow-hidden animate-fade-in"
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1.5px solid var(--color-primary)",
+              backgroundColor: "var(--color-surface, #fff)",
+              boxShadow: "var(--shadow-glow)",
+            }}
+          >
+            <div className="p-5">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "var(--color-accent-bg)" }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                    重新标签完成
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                    已标记 {retag.updated}/{retag.total} 篇日记
+                  </p>
+                </div>
+              </div>
+
+              {/* Before / After comparison */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div
+                  className="p-3"
+                  style={{
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "var(--color-bg-secondary)",
+                  }}
+                >
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--color-text-tertiary)" }}>
+                    旧标签（{retag.oldTags.length} 个）
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {retag.oldTags.slice(0, 15).map((t) => (
+                      <span key={t} className="text-xs px-2 py-0.5" style={{
+                        borderRadius: "var(--radius-sm)",
+                        backgroundColor: "var(--color-bg-hover)",
+                        color: "var(--color-text-tertiary)",
+                        textDecoration: "line-through",
+                        opacity: 0.6,
+                      }}>
+                        {t}
+                      </span>
+                    ))}
+                    {retag.oldTags.length > 15 && (
+                      <span className="text-xs opacity-40">+{retag.oldTags.length - 15}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className="p-3"
+                  style={{
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "var(--color-accent-bg)",
+                  }}
+                >
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--color-accent)" }}>
+                    新标签体系
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(retag.taxonomy).map(([parent, children]) => (
+                      [parent, ...children].map((t) => (
+                        <span key={t} className="tag text-xs">{t}</span>
+                      ))
+                    )).flat().slice(0, 15)}
+                    {Object.values(retag.taxonomy).flat().length + Object.keys(retag.taxonomy).length > 15 && (
+                      <span className="text-xs" style={{ color: "var(--color-accent)", opacity: 0.6 }}>
+                        +{Object.values(retag.taxonomy).flat().length + Object.keys(retag.taxonomy).length - 15}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Taxonomy tree preview */}
+              <div
+                className="p-3 mb-4"
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <p className="text-xs font-medium mb-2" style={{ color: "var(--color-text)" }}>层次结构</p>
+                {Object.entries(retag.taxonomy).map(([parent, children], i) => (
+                  <div key={parent} className="mb-2 last:mb-0 animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
+                    <div className="flex items-center gap-1.5">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{parent}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1 ml-5">
+                      {children.map((c, j) => (
+                        <span
+                          key={c}
+                          className="tag text-xs animate-fade-in-up"
+                          style={{ animationDelay: `${i * 80 + j * 40}ms` }}
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                className="btn-secondary text-sm w-full"
+                onClick={() => setRetag({ step: "idle" })}
+              >
+                关闭
+              </button>
+            </div>
           </div>
         )}
 
@@ -397,7 +638,7 @@ export default function TagsPage() {
           </div>
         )}
 
-        {!loading && tags.length === 0 && (
+        {!loading && tags.length === 0 && retag.step === "idle" && (
           <div className="py-16 text-center">
             <div
               className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl"
@@ -468,6 +709,12 @@ export default function TagsPage() {
           </div>
         )}
       </main>
+
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }
