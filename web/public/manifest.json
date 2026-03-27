@@ -1,21 +1,16 @@
 {
-  "name": "日记系统",
-  "short_name": "日记",
-  "description": "Headless Diary System — 个人日记与 AI 助手",
+  "name": "革命启示录",
+  "short_name": "启示录",
+  "description": "革命启示录 — 记录思想，启示未来",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#FAF7F4",
+  "theme_color": "#B8845C",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

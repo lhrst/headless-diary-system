@@ -295,6 +295,7 @@ export async function getMediaInfo(mediaId: string): Promise<MediaInfoResponse> 
 export function startRetagAll() {
   return fetchApi<{ task_id: string; message: string }>("/tags/retag-all", {
     method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

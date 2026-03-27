@@ -139,10 +139,10 @@ export default function SettingsPage() {
               关于
             </h3>
             <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
-              Headless Diary System v0.1.0
+              革命启示录 v0.1.0
             </p>
             <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)", opacity: 0.6 }}>
-              温暖记录每一天
+              记录思想，启示未来
             </p>
           </div>
         </div>

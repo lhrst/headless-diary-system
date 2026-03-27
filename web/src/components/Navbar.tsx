@@ -54,31 +54,12 @@ export default function Navbar() {
           onClick={() => router.push("/")}
           className="group flex items-center gap-2 transition-all"
         >
-          {/* Small book icon */}
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-lg transition-all group-hover:scale-105"
-            style={{ backgroundColor: "var(--color-accent-bg)" }}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--color-primary)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-              <path d="M8 7h6" />
-              <path d="M8 11h4" />
-            </svg>
-          </span>
+          <img src="/logo.svg" alt="" className="h-8 w-8 transition-all group-hover:scale-105" />
           <span
             className="font-serif text-lg font-semibold tracking-tight"
             style={{ color: "var(--color-text)" }}
           >
-            Diary
+            革命启示录
           </span>
         </button>
 

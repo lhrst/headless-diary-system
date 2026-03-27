@@ -54,7 +54,7 @@ def retag_all_diaries(self, user_id: str):
         # Collect diary summaries (title + first 150 chars)
         summaries = []
         for i, entry in enumerate(entries):
-            title = entry.title or "(无标题)"
+            title = entry.manual_title or entry.auto_title or "(无标题)"
             content = (entry.raw_text or "")[:150].replace("\n", " ")
             summaries.append(f"{i+1}. {title}: {content}")
 
@@ -138,7 +138,7 @@ def retag_all_diaries(self, user_id: str):
             # Build batch prompt
             batch_items = []
             for entry in batch_entries:
-                title = entry.title or "(无标题)"
+                title = entry.manual_title or entry.auto_title or "(无标题)"
                 content = (entry.raw_text or "")[:500].replace("\n", " ")
                 batch_items.append(f"[ID:{entry.id}] {title}: {content}")
 

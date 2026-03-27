@@ -45,25 +45,29 @@ deploy-to:
 	rsync -avz $(RSYNC_EXCLUDE) ./ $(SERVER):$(HOST)/
 	ssh $(SERVER) "cd $(HOST) && docker compose build && docker compose up -d --force-recreate"
 
-## Quick deploy: rsync → build web only → restart web+nginx (fastest for frontend changes)
+## Quick deploy: rsync → stop → build web → restart (avoids OOM on 1.6G server)
 deploy:
 	@echo "==> Syncing files..."
 	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
+	@echo "==> Stopping web+nginx to free memory for build..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose stop web nginx celery-worker"
 	@echo "==> Building web image..."
 	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build web"
-	@echo "==> Restarting web + nginx..."
-	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d --force-recreate web nginx"
+	@echo "==> Starting all services..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d"
 	@echo "==> Verifying..."
 	ssh $(REMOTE) "docker compose -f $(REMOTE_DIR)/docker-compose.yml exec web env | grep NEXT_PUBLIC"
 	@echo "==> Done! Site: http://8.145.43.198"
 
-## Full deploy: rebuild all services
+## Full deploy: rebuild all services (stops everything first to avoid OOM)
 deploy-all:
 	@echo "==> Syncing files..."
 	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
-	@echo "==> Building all images..."
-	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build"
-	@echo "==> Restarting all services..."
+	@echo "==> Stopping services to free memory for build..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose stop web nginx celery-worker api"
+	@echo "==> Building images one by one..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build web && docker compose build api"
+	@echo "==> Starting all services..."
 	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d --force-recreate"
 	@echo "==> Verifying..."
 	ssh $(REMOTE) "docker compose -f $(REMOTE_DIR)/docker-compose.yml exec web env | grep NEXT_PUBLIC"
@@ -73,6 +77,10 @@ deploy-all:
 deploy-api:
 	@echo "==> Syncing files..."
 	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
-	@echo "==> Restarting api + celery..."
-	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build api && docker compose up -d --force-recreate api celery-worker nginx"
+	@echo "==> Stopping api+celery for build..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose stop api celery-worker"
+	@echo "==> Building api + celery-worker images..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build api celery-worker"
+	@echo "==> Starting all services..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d --force-recreate api celery-worker nginx"
 	@echo "==> Done!"

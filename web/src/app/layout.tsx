@@ -45,7 +45,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        <title>Diary</title>
+        <title>革命启示录</title>
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="min-h-screen font-sans">
         {children}
