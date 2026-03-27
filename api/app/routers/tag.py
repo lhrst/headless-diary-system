@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,7 @@ from app.schemas.tag import (
     TagTreeNode,
     TagTreeResponse,
 )
+from app.tasks.retag_tasks import retag_all_diaries
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
@@ -198,6 +200,33 @@ async def remove_tag_hierarchy(
         )
     await db.flush()
     return {"message": f"Removed hierarchy for tag '{tag}'"}
+
+
+@router.post("/retag-all")
+async def start_retag_all(
+    current_user: User = Depends(get_current_user),
+):
+    """Kick off a Celery task to retag all diaries with a hierarchical taxonomy."""
+    task = retag_all_diaries.delay(str(current_user.id))
+    return {"task_id": task.id, "message": "Retag task started"}
+
+
+@router.get("/retag-all/{task_id}")
+async def get_retag_status(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Poll the retag task status."""
+    result = AsyncResult(task_id)
+    if result.state == "PENDING":
+        return {"state": "PENDING", "message": "任务排队中..."}
+    elif result.state == "PROGRESS":
+        return {"state": "PROGRESS", **result.info}
+    elif result.state == "SUCCESS":
+        return {"state": "SUCCESS", **result.result}
+    elif result.state == "FAILURE":
+        return {"state": "FAILURE", "message": str(result.result)}
+    return {"state": result.state, "message": str(result.info)}
 
 
 @router.get("/{tag}/entries", response_model=list[DiaryBrief])

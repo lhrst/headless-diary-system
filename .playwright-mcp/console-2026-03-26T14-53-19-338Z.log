@@ -1,0 +1,86 @@
+[    2035ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at ly (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46887)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:100007
+    at oD (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:106227)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99175)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[    2036ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at lg (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46433)
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:121148)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[    2036ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at lg (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46433)
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:121148)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[    2036ms] Error: Minified React error #423; visit https://reactjs.org/docs/error-decoder.html?invariant=423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:120817)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at ox (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:95741)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94296)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[   69318ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://kit.fontawesome.com/bfc862380e.js:0
+[   69387ms] TypeError: Cannot read properties of undefined (reading 'innerText')
+    at readingTime (https://support.worldquantbrain.com/hc/theming_assets/11185105/1500000894061/script.js?digest=34690737987735:513:68)
+    at HTMLDocument.<anonymous> (https://support.worldquantbrain.com/hc/theming_assets/11185105/1500000894061/script.js?digest=34690737987735:520:3)
+[   69386ms] [WARNING] jQuery.Deferred exception: Cannot read properties of null (reading 'addEventListener') TypeError: Cannot read properties of null (reading 'addEventListener')
+    at HTMLDocument.<anonymous> (https://support.worldquantbrain.com/hc/theming_assets/11185105/1500000894061/script.js?digest=34690737987735:60:39)
+    at e (https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js:2:29453)
+    at t (https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js:2:29755) undefined @ https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js:1
+[   69395ms] Uncaught TypeError: Cannot read properties of null (reading 'addEventListener')
+    at <anonymous> (https://support.worldquantbrain.com/hc/theming_assets/11185105/1500000894061/script.js?digest=34690737987735:59:38)
+    at e (https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js:1:29452)
+    at t (https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js:1:29754)
+[   75572ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at ly (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46887)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:100007
+    at oD (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:106227)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99175)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[   75572ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at lg (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46433)
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:121148)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[   75572ms] Error: Minified React error #418; visit https://reactjs.org/docs/error-decoder.html?invariant=418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at lg (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:46433)
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:121148)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94028)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)
+[   75572ms] Error: Minified React error #423; visit https://reactjs.org/docs/error-decoder.html?invariant=423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at i (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:120817)
+    at oO (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:99115)
+    at https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98982
+    at oF (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:98989)
+    at ox (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:95741)
+    at oS (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:94296)
+    at x (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:137525)
+    at MessagePort.T (https://prod.smassets.net/assets/smweb/_next/static/chunks/framework-5ddd597c94d4e4d0.js:1:138055)

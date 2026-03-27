@@ -1,0 +1,19 @@
+[     167ms] [WARNING] Unmatched POST to https://www.google-analytics.com/g/collect?v=2&tid=G-9RN6WVT1K1&gtm=45je63o1v888429795za200zb890839650zd890839650&_p=1774537958700&gcs=G111&gcd=13r3r3n3n5l1&npa=0&dma=0&gdid=dY2Q2ZW&cid=796630201.1774536189&ul=zh-cn&sr=1920x1080&uaa=arm&uab=64&uafvl=Chromium%3B146.0.7680.165%7CNot-A.Brand%3B24.0.0.0%7CGoogle%2520Chrome%3B146.0.7680.165&uamb=0&uam=&uap=macOS&uapv=26.3.0&uaw=0&are=1&frm=0&pscdl=noapi&_eu=AAAAAEQ&_s=6&tag_exp=103116026~103200004~115938465~115938469~116024733~117484252~118128922&sid=1774536189&sct=1&seg=1&dl=https%3A%2F%2Fplatform.worldquantbrain.com%2Fsimulate&dr=https%3A%2F%2Fplatform.worldquantbrain.com%2Fsimulate%2Ftutorial&dt=WorldQuant%20BRAIN&uid=TL61770&en=user_engagement&_et=6195&tfd=27881 @ https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:1
+[    1198ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.redditstatic.com/ads/v2.js:0
+[    1200ms] [ERROR] Attestation check for Attribution Reporting on https://www.facebook.com failed. @ https://platform.worldquantbrain.com/profile/account/basic-details:0
+[    2850ms] [WARNING] Deprecation warning: value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.
+Arguments: 
+[0] _isAMomentObject: true, _isUTC: false, _useUTC: false, _l: undefined, _i: 19:02, _f: undefined, _strict: undefined, _locale: [object Object]
+Error
+    at r.createFromInputFallback (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1675212)
+    at kn (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1699654)
+    at Gn (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1703000)
+    at Hn (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1702866)
+    at Un (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1702584)
+    at Zn (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1703358)
+    at Vn (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1703392)
+    at r (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:1672085)
+    at ha.checkIfIsTime (https://platform.worldquantbrain.com/static/js/1578.c200c95d.js:1:1069853)
+    at https://platform.worldquantbrain.com/static/js/1578.c200c95d.js:1:1068944
+    at r (https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:2:251254) @ https://platform.worldquantbrain.com/static/js/2029.e1b6aa00.js:1
+[   50633ms] [ERROR] Attestation check for Attribution Reporting on https://www.facebook.com failed. @ https://platform.worldquantbrain.com/profile/account/workday:0

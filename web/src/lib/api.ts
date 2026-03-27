@@ -289,3 +289,23 @@ export async function uploadMedia(
 export async function getMediaInfo(mediaId: string): Promise<MediaInfoResponse> {
   return fetchApi<MediaInfoResponse>(`/media/${mediaId}/info`);
 }
+
+// ── Retag All ──
+
+export function startRetagAll() {
+  return fetchApi<{ task_id: string; message: string }>("/tags/retag-all", {
+    method: "POST",
+  });
+}
+
+export function getRetagStatus(taskId: string) {
+  return fetchApi<{
+    state: string;
+    phase?: string;
+    message?: string;
+    current?: number;
+    total?: number;
+    taxonomy?: Record<string, string[]>;
+    updated?: number;
+  }>(`/tags/retag-all/${taskId}`);
+}

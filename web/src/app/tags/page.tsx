@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
-import { getTags, getTagTree, setTagHierarchy, removeTagHierarchy } from "@/lib/api";
+import { getTags, getTagTree, setTagHierarchy, removeTagHierarchy, startRetagAll, getRetagStatus } from "@/lib/api";
 import type { TagSuggestItem, TagTreeNode } from "@/lib/types";
 import Navbar from "@/components/Navbar";
 
@@ -162,6 +162,12 @@ export default function TagsPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"cloud" | "tree">("tree");
 
+  // Retag state
+  const [retagging, setRetagging] = useState(false);
+  const [retagMessage, setRetagMessage] = useState("");
+  const [retagProgress, setRetagProgress] = useState<{ current: number; total: number } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const loadData = useCallback(async () => {
     if (!authed) return;
     setLoading(true);
@@ -179,6 +185,58 @@ export default function TagsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const handleRetagAll = async () => {
+    if (retagging) return;
+    if (!confirm("这将用 AI 重新设计标签体系并重新标记所有日记。已有的 AI 标签会被替换，手动标签保留。确定继续？")) return;
+
+    setRetagging(true);
+    setRetagMessage("正在启动...");
+    setRetagProgress(null);
+
+    try {
+      const { task_id } = await startRetagAll();
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await getRetagStatus(task_id);
+          setRetagMessage(status.message || "处理中...");
+
+          if (status.current !== undefined && status.total !== undefined) {
+            setRetagProgress({ current: status.current, total: status.total });
+          }
+
+          if (status.state === "SUCCESS" || status.state === "FAILURE") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
+            setRetagging(false);
+            if (status.state === "SUCCESS") {
+              await loadData();
+            }
+            // Keep message visible for a few seconds
+            setTimeout(() => {
+              setRetagMessage("");
+              setRetagProgress(null);
+            }, 5000);
+          }
+        } catch {
+          // Keep polling on transient errors
+        }
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setRetagging(false);
+      setRetagMessage("启动失败");
+      setTimeout(() => setRetagMessage(""), 3000);
+    }
+  };
 
   const handleSetParent = async (tag: string, parent: string) => {
     try {
@@ -234,38 +292,99 @@ export default function TagsPage() {
             </h1>
           </div>
 
-          {/* View mode toggle */}
-          <div
-            className="flex gap-0.5 p-1"
-            style={{
-              backgroundColor: "var(--color-bg-secondary)",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            {[
-              { id: "tree" as const, label: "树形" },
-              { id: "cloud" as const, label: "云图" },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                className="px-3 py-1.5 text-sm font-medium transition-all"
-                style={{
-                  borderRadius: "var(--radius-sm)",
-                  backgroundColor:
-                    viewMode === mode.id ? "var(--color-surface, #fff)" : "transparent",
-                  color:
-                    viewMode === mode.id
-                      ? "var(--color-text)"
-                      : "var(--color-text-tertiary)",
-                  boxShadow: viewMode === mode.id ? "var(--shadow-sm)" : "none",
-                }}
-                onClick={() => setViewMode(mode.id)}
-              >
-                {mode.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            {/* Retag button */}
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all"
+              style={{
+                borderRadius: "var(--radius-md)",
+                backgroundColor: retagging ? "var(--color-bg-secondary)" : "var(--color-accent-bg)",
+                color: retagging ? "var(--color-text-tertiary)" : "var(--color-accent)",
+                opacity: retagging ? 0.7 : 1,
+              }}
+              onClick={handleRetagAll}
+              disabled={retagging}
+            >
+              {retagging ? (
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent"
+                  style={{ animation: "spin 0.6s linear infinite" }}
+                />
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83" />
+                </svg>
+              )}
+              AI 重新标签
+            </button>
+
+            {/* View mode toggle */}
+            <div
+              className="flex gap-0.5 p-1"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              {[
+                { id: "tree" as const, label: "树形" },
+                { id: "cloud" as const, label: "云图" },
+              ].map((mode) => (
+                <button
+                  key={mode.id}
+                  className="px-3 py-1.5 text-sm font-medium transition-all"
+                  style={{
+                    borderRadius: "var(--radius-sm)",
+                    backgroundColor:
+                      viewMode === mode.id ? "var(--color-surface, #fff)" : "transparent",
+                    color:
+                      viewMode === mode.id
+                        ? "var(--color-text)"
+                        : "var(--color-text-tertiary)",
+                    boxShadow: viewMode === mode.id ? "var(--shadow-sm)" : "none",
+                  }}
+                  onClick={() => setViewMode(mode.id)}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Retag progress */}
+        {retagMessage && (
+          <div
+            className="mb-6 p-4 animate-fade-in"
+            style={{
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--color-surface, #fff)",
+            }}
+          >
+            <p className="text-sm mb-2" style={{ color: "var(--color-text-secondary)" }}>
+              {retagMessage}
+            </p>
+            {retagProgress && retagProgress.total > 0 && (
+              <div
+                className="h-2 w-full overflow-hidden"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                }}
+              >
+                <div
+                  className="h-full transition-all duration-500"
+                  style={{
+                    width: `${Math.round((retagProgress.current / retagProgress.total) * 100)}%`,
+                    backgroundColor: "var(--color-primary)",
+                    borderRadius: "var(--radius-sm)",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="space-y-3">

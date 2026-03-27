@@ -1,0 +1,13 @@
+[    1850ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4309/pt_get_uins?callback=ptui_getuins_CB&r=0.060709521613051765&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
+[    5968ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14013/api/check-login:0
+[    6021ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4301/pt_get_uins?callback=ptui_getuins_CB&r=0.060709521613051765&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
+[    6278ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:13014/api/check-login:0
+[    6407ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14015/api/check-login:0
+[    6619ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14014/api/check-login:0
+[    6750ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4305/pt_get_uins?callback=ptui_getuins_CB&r=0.060709521613051765&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
+[    6800ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:13015/api/check-login:0
+[    7385ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:13013/api/check-login:0
+[    7511ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4307/pt_get_uins?callback=ptui_getuins_CB&r=0.060709521613051765&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
+[    7531ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4303/pt_get_uins?callback=ptui_getuins_CB&r=0.060709521613051765&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
+[   67974ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wx.mail.qq.com/info/geticon?addr=MainlandChina%40worldquantbrain.com&type=0:0
+[  122873ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wx.mail.qq.com/info/geticon?addr=MainlandChina%40worldquantbrain.com&type=0:0

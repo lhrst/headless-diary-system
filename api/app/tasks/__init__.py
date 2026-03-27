@@ -20,5 +20,6 @@ celery_app.conf.update(
         "app.tasks.agent_tasks",
         "app.tasks.title_tasks",
         "app.tasks.caption_tasks",
+        "app.tasks.retag_tasks",
     ],
 )
