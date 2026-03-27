@@ -1,7 +1,0 @@
-[    7738ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14015/api/check-login:0
-[    8218ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14014/api/check-login:0
-[    8633ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4301/pt_get_uins?callback=ptui_getuins_CB&r=0.14411658290098806&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
-[    9096ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:13014/api/check-login:0
-[    9263ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.weixin.qq.com:14013/api/check-login:0
-[    9274ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4307/pt_get_uins?callback=ptui_getuins_CB&r=0.14411658290098806&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0
-[    9465ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://localhost.ptlogin2.qq.com:4303/pt_get_uins?callback=ptui_getuins_CB&r=0.14411658290098806&pt_local_tk=-958910777&pt_aid=716027609&daid=383&pt_3rd_aid=102013353&u1=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump:0

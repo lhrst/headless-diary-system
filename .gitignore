@@ -36,3 +36,4 @@ Thumbs.db
 # SSL certs
 nginx/ssl/*.pem
 nginx/ssl/*.key
+.playwright-mcp/
