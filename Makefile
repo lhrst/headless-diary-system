@@ -35,6 +35,44 @@ backup-light:
 	tar -czf backup-light-$(shell date +%Y%m%d).tar.gz data/diaries/ backup-db.sql
 	rm backup-db.sql
 
+REMOTE = lhrst@8.145.43.198
+REMOTE_DIR = /home/lhrst/projects/diary
+RSYNC_EXCLUDE = --exclude='.env' --exclude='data/' --exclude='node_modules/' \
+	--exclude='.next/' --exclude='__pycache__/' --exclude='.git/' \
+	--exclude='.venv/' --exclude='.playwright-mcp/' --exclude='.claude/'
+
 deploy-to:
-	rsync -avz --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='.next/' --exclude='__pycache__/' --exclude='.git/' ./ $(SERVER):$(HOST)/
+	rsync -avz $(RSYNC_EXCLUDE) ./ $(SERVER):$(HOST)/
 	ssh $(SERVER) "cd $(HOST) && docker compose build && docker compose up -d --force-recreate"
+
+## Quick deploy: rsync → build web only → restart web+nginx (fastest for frontend changes)
+deploy:
+	@echo "==> Syncing files..."
+	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
+	@echo "==> Building web image..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build web"
+	@echo "==> Restarting web + nginx..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d --force-recreate web nginx"
+	@echo "==> Verifying..."
+	ssh $(REMOTE) "docker compose -f $(REMOTE_DIR)/docker-compose.yml exec web env | grep NEXT_PUBLIC"
+	@echo "==> Done! Site: http://8.145.43.198"
+
+## Full deploy: rebuild all services
+deploy-all:
+	@echo "==> Syncing files..."
+	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
+	@echo "==> Building all images..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build"
+	@echo "==> Restarting all services..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose up -d --force-recreate"
+	@echo "==> Verifying..."
+	ssh $(REMOTE) "docker compose -f $(REMOTE_DIR)/docker-compose.yml exec web env | grep NEXT_PUBLIC"
+	@echo "==> Done! Site: http://8.145.43.198"
+
+## Deploy API only (backend changes)
+deploy-api:
+	@echo "==> Syncing files..."
+	rsync -avz $(RSYNC_EXCLUDE) ./ $(REMOTE):$(REMOTE_DIR)/
+	@echo "==> Restarting api + celery..."
+	ssh $(REMOTE) "cd $(REMOTE_DIR) && docker compose build api && docker compose up -d --force-recreate api celery-worker nginx"
+	@echo "==> Done!"

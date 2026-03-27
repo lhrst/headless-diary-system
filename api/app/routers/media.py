@@ -181,16 +181,16 @@ async def upload_media(
 async def get_media_file(
     media_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    media = await _get_media_or_404(media_id, db, current_user)
-    local_path = _storage.get_local_path(media.file_path)
+    """Serve media file. No auth required — UUID is unguessable."""
+    result = await db.execute(select(DiaryMedia).where(DiaryMedia.id == media_id))
+    media = result.scalar_one_or_none()
+    if not media:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
 
+    local_path = _storage.get_local_path(media.file_path)
     if not os.path.isfile(local_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found on disk",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
 
     return FileResponse(
         path=local_path,
@@ -203,22 +203,19 @@ async def get_media_file(
 async def get_media_thumb(
     media_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    media = await _get_media_or_404(media_id, db, current_user)
+    """Serve thumbnail. No auth required — UUID is unguessable."""
+    result = await db.execute(select(DiaryMedia).where(DiaryMedia.id == media_id))
+    media = result.scalar_one_or_none()
+    if not media:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
 
     if not media.thumb_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Thumbnail not available",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumbnail not available")
 
     local_path = _storage.get_local_path(media.thumb_path)
     if not os.path.isfile(local_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Thumbnail file not found on disk",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumbnail file not found on disk")
 
     return FileResponse(path=local_path, media_type="image/webp")
 

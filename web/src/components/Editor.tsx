@@ -3,10 +3,11 @@
 import { useEditor, EditorContent, Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Image from "@tiptap/extension-image";
 import { Extension } from "@tiptap/core";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { suggestTags } from "@/lib/api";
-import type { TagSuggestItem } from "@/lib/types";
+import { suggestTags, getTags, suggestDiary, uploadMedia } from "@/lib/api";
+import type { TagSuggestItem, DiarySuggestItem } from "@/lib/types";
 
 /* ── Types ── */
 
@@ -15,6 +16,8 @@ interface EditorProps {
   onChange?: (content: string) => void;
   onSubmit?: () => void;
   onFileUpload?: (file: File) => void;
+  /** Enable built-in image/file upload via paste, drop, and toolbar */
+  enableUpload?: boolean;
   placeholder?: string;
   className?: string;
 }
@@ -259,7 +262,7 @@ function Toolbar({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,.pdf,.doc,.docx,.txt,.md"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md,.gif"
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -350,6 +353,10 @@ function Footer({
 
 export function htmlToMarkdown(html: string): string {
   let md = html;
+  // Convert images before stripping tags
+  md = md.replace(/<img[^>]+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, "![$2]($1)");
+  md = md.replace(/<img[^>]+alt="([^"]*)"[^>]*src="([^"]*)"[^>]*\/?>/gi, "![$1]($2)");
+  md = md.replace(/<img[^>]+src="([^"]*)"[^>]*\/?>/gi, "![]($1)");
   md = md.replace(/<s>(.*?)<\/s>/gi, "~~$1~~");
   md = md.replace(/<del>(.*?)<\/del>/gi, "~~$1~~");
   md = md.replace(/<hr\s*\/?>/gi, "\n---\n");
@@ -372,6 +379,8 @@ export function htmlToMarkdown(html: string): string {
 
 export function markdownToHtml(md: string): string {
   let html = md;
+  // Convert images before other transformations
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
   html = html.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
   html = html.replace(/^---$/gm, "<hr>");
   html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
@@ -402,28 +411,55 @@ export default function Editor({
   onChange,
   onSubmit,
   onFileUpload,
+  enableUpload,
   placeholder,
   className,
 }: EditorProps) {
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
+  const editorRef = useRef<TiptapEditor | null>(null);
 
+  /* ── Tag autocomplete state ── */
   const [tagQuery, setTagQuery] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<TagSuggestItem[]>([]);
   const [showTagPopup, setShowTagPopup] = useState(false);
+  const [tagActiveIndex, setTagActiveIndex] = useState(0);
   const tagDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hashRangeRef = useRef<{ from: number; to: number } | null>(null);
 
+  /* ── Diary suggest state ── */
+  const [diaryQuery, setDiaryQuery] = useState("");
+  const [diarySuggestions, setDiarySuggestions] = useState<DiarySuggestItem[]>([]);
+  const [showDiaryPopup, setShowDiaryPopup] = useState(false);
+  const [diaryActiveIndex, setDiaryActiveIndex] = useState(0);
+  const diaryDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bracketRangeRef = useRef<{ from: number; to: number } | null>(null);
+
+  /* ── Upload state ── */
+  const [uploading, setUploading] = useState(false);
+
+  /* ── Tag suggestions fetch ── */
   useEffect(() => {
-    if (!showTagPopup || !tagQuery) {
+    if (!showTagPopup) {
       setTagSuggestions([]);
       return;
     }
     if (tagDebounceRef.current) clearTimeout(tagDebounceRef.current);
     tagDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await suggestTags(tagQuery);
-        setTagSuggestions(res.suggestions.slice(0, 6));
+        if (tagQuery) {
+          const res = await suggestTags(tagQuery);
+          setTagSuggestions(res.suggestions.slice(0, 6));
+        } else {
+          // Empty query: show all tags sorted by usage
+          const res = await getTags();
+          setTagSuggestions(
+            res.tags
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 6),
+          );
+        }
+        setTagActiveIndex(0);
       } catch {
         setTagSuggestions([]);
       }
@@ -433,10 +469,70 @@ export default function Editor({
     };
   }, [tagQuery, showTagPopup]);
 
+  /* ── Diary suggestions fetch ── */
+  useEffect(() => {
+    if (!showDiaryPopup) {
+      setDiarySuggestions([]);
+      return;
+    }
+    if (!diaryQuery.trim()) {
+      setDiarySuggestions([]);
+      return;
+    }
+    if (diaryDebounceRef.current) clearTimeout(diaryDebounceRef.current);
+    diaryDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await suggestDiary(diaryQuery);
+        setDiarySuggestions(res.suggestions.slice(0, 6));
+        setDiaryActiveIndex(0);
+      } catch {
+        setDiarySuggestions([]);
+      }
+    }, 200);
+    return () => {
+      if (diaryDebounceRef.current) clearTimeout(diaryDebounceRef.current);
+    };
+  }, [diaryQuery, showDiaryPopup]);
+
+  /* ── File upload handler ── */
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      // Delegate to external handler if provided
+      if (onFileUpload) {
+        onFileUpload(file);
+        return;
+      }
+      // Built-in upload
+      if (!enableUpload) return;
+      const ed = editorRef.current;
+      if (!ed) return;
+
+      setUploading(true);
+      try {
+        const res = await uploadMedia(file);
+        if (res.media_type === "photo") {
+          ed.chain().focus().setImage({ src: res.url, alt: res.original_name }).run();
+        } else {
+          // For non-image files, insert markdown link
+          ed.chain().focus().insertContent(`[${res.original_name}](${res.url})`).run();
+        }
+      } catch (err) {
+        console.error("Upload failed:", err);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [onFileUpload, enableUpload],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
       }),
       Placeholder.configure({
         placeholder: placeholder ?? "开始写日记...",
@@ -450,30 +546,68 @@ export default function Editor({
           "prose prose-neutral max-w-none px-5 py-4 min-h-[200px] focus:outline-none",
       },
       handleKeyDown: (_view, event) => {
-        if (event.key === "Escape" && showTagPopup) {
-          setShowTagPopup(false);
-          return true;
+        // Handle popup keyboard navigation
+        if (showTagPopup && tagSuggestions.length > 0) {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setTagActiveIndex((prev) => (prev + 1) % tagSuggestions.length);
+            return true;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setTagActiveIndex((prev) => (prev - 1 + tagSuggestions.length) % tagSuggestions.length);
+            return true;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            // Will be handled via effect
+            return true;
+          }
+          if (event.key === "Escape") {
+            setShowTagPopup(false);
+            return true;
+          }
+        }
+        if (showDiaryPopup && diarySuggestions.length > 0) {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setDiaryActiveIndex((prev) => (prev + 1) % diarySuggestions.length);
+            return true;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setDiaryActiveIndex((prev) => (prev - 1 + diarySuggestions.length) % diarySuggestions.length);
+            return true;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            return true;
+          }
+          if (event.key === "Escape") {
+            setShowDiaryPopup(false);
+            return true;
+          }
         }
         return false;
       },
       handleDrop: (_view, event) => {
-        if (!onFileUpload) return false;
+        if (!onFileUpload && !enableUpload) return false;
         const files = event.dataTransfer?.files;
         if (files && files.length > 0) {
           event.preventDefault();
           for (let i = 0; i < files.length; i++) {
-            onFileUpload(files[i]);
+            handleUploadFile(files[i]);
           }
           return true;
         }
         return false;
       },
       handlePaste: (_view, event) => {
-        if (!onFileUpload) return false;
+        if (!onFileUpload && !enableUpload) return false;
         const files = event.clipboardData?.files;
         if (files && files.length > 0) {
           for (let i = 0; i < files.length; i++) {
-            onFileUpload(files[i]);
+            handleUploadFile(files[i]);
           }
           return true;
         }
@@ -485,6 +619,8 @@ export default function Editor({
 
       const cursorPos = ed.state.selection.from;
       const textBeforeCursor = ed.state.doc.textBetween(0, cursorPos);
+
+      // Detect #tag pattern
       const hashMatch = textBeforeCursor.match(/#([\w\u4e00-\u9fff]*)$/);
       if (hashMatch) {
         setTagQuery(hashMatch[1]);
@@ -494,8 +630,34 @@ export default function Editor({
       } else {
         setShowTagPopup(false);
       }
+
+      // Detect [[ diary reference pattern
+      const bracketMatch = textBeforeCursor.match(/\[\[([\w\u4e00-\u9fff\s]*)$/);
+      if (bracketMatch) {
+        setDiaryQuery(bracketMatch[1]);
+        setShowDiaryPopup(true);
+        const from = cursorPos - bracketMatch[0].length;
+        bracketRangeRef.current = { from, to: cursorPos };
+      } else {
+        setShowDiaryPopup(false);
+      }
     },
   });
+
+  // Keep editorRef in sync
+  useEffect(() => {
+    if (editor) editorRef.current = editor;
+  }, [editor]);
+
+  /* ── Enter key handlers for popup selection (via refs to avoid stale closure) ── */
+  const tagActiveIndexRef = useRef(tagActiveIndex);
+  tagActiveIndexRef.current = tagActiveIndex;
+  const tagSuggestionsRef = useRef(tagSuggestions);
+  tagSuggestionsRef.current = tagSuggestions;
+  const diaryActiveIndexRef = useRef(diaryActiveIndex);
+  diaryActiveIndexRef.current = diaryActiveIndex;
+  const diarySuggestionsRef = useRef(diarySuggestions);
+  diarySuggestionsRef.current = diarySuggestions;
 
   const handleSelectTag = useCallback(
     (tag: string) => {
@@ -512,6 +674,37 @@ export default function Editor({
     [editor],
   );
 
+  const handleSelectDiary = useCallback(
+    (item: DiarySuggestItem) => {
+      if (!editor || !bracketRangeRef.current) return;
+      const { from, to } = bracketRangeRef.current;
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, `[[${item.id}|${item.title}]]`)
+        .run();
+      setShowDiaryPopup(false);
+    },
+    [editor],
+  );
+
+  // Handle Enter key selection for popups
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Enter") return;
+      if (showTagPopup && tagSuggestionsRef.current.length > 0) {
+        const tag = tagSuggestionsRef.current[tagActiveIndexRef.current];
+        if (tag) handleSelectTag(tag.tag);
+      } else if (showDiaryPopup && diarySuggestionsRef.current.length > 0) {
+        const item = diarySuggestionsRef.current[diaryActiveIndexRef.current];
+        if (item) handleSelectDiary(item);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [showTagPopup, showDiaryPopup, handleSelectTag, handleSelectDiary]);
+
   const setContent = useCallback(
     (content: string) => {
       if (editor && content !== editor.getHTML()) {
@@ -527,6 +720,8 @@ export default function Editor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContent]);
+
+  const showUploadButton = !!(onFileUpload || enableUpload);
 
   return (
     <div
@@ -549,8 +744,23 @@ export default function Editor({
         }
       }}
     >
-      <Toolbar editor={editor} onFileUpload={onFileUpload} />
+      <Toolbar editor={editor} onFileUpload={showUploadButton ? handleUploadFile : undefined} />
       <EditorContent editor={editor} />
+
+      {/* Upload indicator */}
+      {uploading && (
+        <div
+          className="flex items-center gap-2 px-4 py-2 text-xs"
+          style={{ color: "var(--color-text-tertiary)", borderTop: "1px solid var(--color-border)" }}
+        >
+          <span
+            className="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent"
+            style={{ animation: "spin 0.6s linear infinite" }}
+          />
+          上传中...
+        </div>
+      )}
+
       <Footer editor={editor} showSubmitHint={!!onSubmit} />
 
       {/* Tag autocomplete popup */}
@@ -565,22 +775,20 @@ export default function Editor({
             boxShadow: "var(--shadow-lg)",
           }}
         >
-          {tagSuggestions.map((s) => (
+          {tagSuggestions.map((s, idx) => (
             <button
               key={s.tag}
               type="button"
               className="flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors"
-              style={{ color: "var(--color-text)" }}
+              style={{
+                color: "var(--color-text)",
+                backgroundColor: idx === tagActiveIndex ? "var(--color-bg-hover)" : "transparent",
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSelectTag(s.tag);
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
+              onMouseEnter={() => setTagActiveIndex(idx)}
             >
               <span>#{s.tag}</span>
               <span
@@ -589,6 +797,63 @@ export default function Editor({
               >
                 {s.count} 次
               </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Diary reference popup */}
+      {showDiaryPopup && (
+        <div
+          className="absolute left-4 right-4 z-50 mt-1 max-h-56 overflow-y-auto animate-scale-in"
+          style={{
+            bottom: "3rem",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface, #fff)",
+            boxShadow: "var(--shadow-lg)",
+          }}
+        >
+          {diarySuggestions.length === 0 && diaryQuery.trim() && (
+            <div
+              className="px-4 py-3 text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              未找到匹配的日记
+            </div>
+          )}
+          {diarySuggestions.length === 0 && !diaryQuery.trim() && (
+            <div
+              className="px-4 py-3 text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              输入关键词搜索日记...
+            </div>
+          )}
+          {diarySuggestions.map((item, idx) => (
+            <button
+              key={item.id}
+              type="button"
+              className="flex w-full flex-col px-4 py-2.5 text-sm transition-colors text-left"
+              style={{
+                color: "var(--color-text)",
+                backgroundColor: idx === diaryActiveIndex ? "var(--color-bg-hover)" : "transparent",
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectDiary(item);
+              }}
+              onMouseEnter={() => setDiaryActiveIndex(idx)}
+            >
+              <span className="font-medium truncate">{item.title}</span>
+              {item.preview && (
+                <span
+                  className="text-xs truncate mt-0.5"
+                  style={{ color: "var(--color-text-tertiary)" }}
+                >
+                  {item.preview}
+                </span>
+              )}
             </button>
           ))}
         </div>

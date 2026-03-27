@@ -270,17 +270,7 @@ function HomePageInner() {
                   placeholder="记录一下..."
                   onChange={(html) => setQuickContent(html)}
                   onSubmit={handleQuickPublish}
-                  onFileUpload={async (file) => {
-                    try {
-                      const { uploadMedia } = await import("@/lib/api");
-                      const res = await uploadMedia(file);
-                      setQuickContent(
-                        (prev) => prev + `\n${res.markdown_embed}\n`,
-                      );
-                    } catch (e) {
-                      console.error(e);
-                    }
-                  }}
+                  enableUpload
                 />
                 <div className="mt-3 flex items-center justify-between">
                   <button

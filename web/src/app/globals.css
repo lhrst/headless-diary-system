@@ -310,6 +310,14 @@
 .prose img {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  max-width: 240px;
+  max-height: 180px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.prose img:hover {
+  opacity: 0.85;
 }
 
 /* ── TipTap Editor Placeholder ── */
@@ -320,4 +328,30 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* ── Image Lightbox ── */
+
+.image-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  cursor: zoom-out;
+  animation: lightbox-fade-in 0.15s ease-out;
+}
+.image-lightbox-overlay img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+@keyframes lightbox-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

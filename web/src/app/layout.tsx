@@ -1,7 +1,7 @@
 "use client";
 
 import "./globals.css";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function RootLayout({
   children,
@@ -9,11 +9,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [theme, setTheme] = useState("default");
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("diary_theme") || "default";
     setTheme(saved);
   }, []);
+
+  // Global click handler: click any .prose img to open lightbox
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "IMG" && target.closest(".prose")) {
+        const src = (target as HTMLImageElement).src;
+        if (src) setLightboxSrc(src);
+      }
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
+
+  const closeLightbox = useCallback(() => setLightboxSrc(null), []);
 
   return (
     <html lang="zh-CN" data-theme={theme}>
@@ -31,7 +47,14 @@ export default function RootLayout({
         />
         <title>Diary</title>
       </head>
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen font-sans">
+        {children}
+        {lightboxSrc && (
+          <div className="image-lightbox-overlay" onClick={closeLightbox}>
+            <img src={lightboxSrc} alt="" onClick={(e) => e.stopPropagation()} />
+          </div>
+        )}
+      </body>
     </html>
   );
 }

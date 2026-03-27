@@ -146,6 +146,7 @@ export default function EditDiaryPage() {
           initialContent={markdownToHtml(content)}
           onChange={(html) => setContent(htmlToMarkdown(html))}
           onSubmit={handleSave}
+          enableUpload
           className="min-h-[60vh]"
         />
       </main>

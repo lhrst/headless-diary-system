@@ -122,6 +122,7 @@ export default function NewDiaryPage() {
           placeholder="开始记录今天的想法..."
           onChange={(html) => setContent(htmlToMarkdown(html))}
           onSubmit={handleSave}
+          enableUpload
           className="min-h-[60vh]"
         />
       </main>
