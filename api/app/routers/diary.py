@@ -287,6 +287,48 @@ async def create_diary(
                     db.add(DiaryTag(entry_id=entry.id, tag=tag_name, is_ai=True))
                 tags = ai_tags
                 await db.flush()
+
+                # Auto-attach new tags to hierarchy tree
+                from app.models.tag import TagHierarchy
+                # Get existing hierarchy parent tags
+                hierarchy_result = await db.execute(
+                    select(TagHierarchy.parent_tag, TagHierarchy.child_tag)
+                    .where(TagHierarchy.user_id == current_user.id)
+                )
+                hierarchy_rows = hierarchy_result.all()
+                parent_tags = set(r[0] for r in hierarchy_rows)
+                child_tags = set(r[1] for r in hierarchy_rows)
+                all_hierarchy_tags = parent_tags | child_tags
+
+                for tag_name in ai_tags:
+                    if tag_name not in all_hierarchy_tags and parent_tags:
+                        # New tag not in tree — find best parent via LLM
+                        parent_list = ", ".join(sorted(parent_tags))
+                        parent_resp = client.post(
+                            f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                            headers={
+                                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                                "Content-Type": "application/json",
+                            },
+                            json={
+                                "model": settings.LLM_MODEL_FAST,
+                                "messages": [{"role": "user", "content":
+                                    f"标签「{tag_name}」应该归类到以下哪个父标签下？\n"
+                                    f"父标签列表：{parent_list}\n"
+                                    f"只输出一个父标签名，不要其他内容。"
+                                }],
+                                "max_tokens": 20,
+                            },
+                        )
+                        parent_resp.raise_for_status()
+                        chosen_parent = parent_resp.json()["choices"][0]["message"]["content"].strip()
+                        if chosen_parent in parent_tags:
+                            db.add(TagHierarchy(
+                                user_id=current_user.id,
+                                parent_tag=chosen_parent,
+                                child_tag=tag_name,
+                            ))
+                await db.flush()
         except Exception:
             import traceback
             traceback.print_exc()

@@ -181,9 +181,7 @@ function HomePageInner() {
   };
 
   const handleTagClick = (tag: string) => {
-    const next = activeTag === tag ? "" : tag;
-    setActiveTag(next);
-    setTimeout(() => loadDiaries(1), 0);
+    setActiveTag((prev) => (prev === tag ? "" : tag));
   };
 
   if (!mounted) {

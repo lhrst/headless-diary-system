@@ -2,7 +2,7 @@
 
 ## 项目概况
 
-这是一个自托管的 headless 日记系统，前后端分离。详见 `README.md`。
+「革命启示录」— 自托管的 headless 日记系统，前后端分离。详见 `README.md`。
 
 ## 开始前必读
 
@@ -33,10 +33,18 @@
 
 ### 部署红线（极其重要）
 
-1. **rsync 到服务器时必须排除 `.env`** — 服务器 `.env` 里 `DATABASE_URL` 用 `@postgres:5432`，本地用 `@localhost:5432`，覆盖会导致 502
+1. **rsync 到服务器时必须排除 `.env`** — 服务器 `.env` 里 `DATABASE_URL` 用 `@postgres:5432`、`REDIS_URL` 用 `redis://redis:6379`，本地用 localhost，覆盖会导致 502
 2. **重建 web 镜像后必须验证** `docker compose exec web env | grep NEXT_PUBLIC` 确认是 `http://8.145.43.198/api/v1`
 3. **绝对不要 `rm -rf data/postgres`** — 会丢失所有用户数据
 4. rsync 排除列表：`.env`、`data/`、`node_modules/`、`.next/`、`__pycache__/`、`.git/`、`.venv/`、`.playwright-mcp/`、`.claude/`（均已内置在 Makefile 中）
+
+### 踩坑记录
+
+- **celery-worker 和 api 是独立镜像**：虽然都 `build: ./api`，但 `docker compose build api` 不会重建 celery-worker，改了后端代码必须两个都 build（`make deploy-api` 已内置）
+- **构建必须先停容器**：服务器只有 1.6G 内存，边跑服务边 build 会 OOM 导致 SSH 断开、服务器卡死（需要去阿里云控制台重启）。所有 make deploy 命令已改为先 stop 再 build
+- **DiaryEntry 模型没有 `title` 字段**：用 `manual_title` / `auto_title`，写 Celery 任务时注意
+- **空 body POST 请求**：nginx 对 Content-Type: application/json 但无 body 的 POST 返回 400，前端需要发 `body: JSON.stringify({})`
+- **git push 不需要代理**：环境变量可能带了代理配置，用 `https_proxy="" git push` 绕过
 
 ## 服务器信息
 
@@ -53,6 +61,7 @@
 
 ## 开发约定
 
+- 品牌名「革命启示录」，logo 在 `web/public/logo.svg`
 - LLM 模型名不要硬编码，用 `settings.LLM_MODEL_FAST` / `settings.LLM_MODEL_SMART`
 - 前端用 CSS 变量做主题（`var(--color-*)`），不要硬编码颜色
 - 中文 UI，代码注释英文
