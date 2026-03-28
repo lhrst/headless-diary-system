@@ -54,6 +54,56 @@ def _entry_title_source(entry: DiaryEntry) -> str:
     return "none"
 
 
+def _build_search_filter(q: str):
+    """Build a combined search filter: FTS + trigram + title match.
+
+    If the query looks like a natural language question (>6 chars, contains
+    question-like patterns), expand it into keywords via LLM for better recall.
+    """
+    from sqlalchemy import text, or_
+
+    keywords = q.strip()
+
+    # For natural-language queries, use LLM to extract search keywords
+    if len(keywords) > 6 and any(c in keywords for c in "？?怎什为吗哪能不如何关于"):
+        try:
+            import httpx
+            with httpx.Client(timeout=8, proxy=None) as client:
+                resp = client.post(
+                    f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": settings.LLM_MODEL_FAST,
+                        "messages": [{"role": "user", "content":
+                            f"将以下搜索意图拆解为2-5个搜索关键词，用空格分隔，不要其他内容：\n{keywords}"
+                        }],
+                        "max_tokens": 30,
+                    },
+                )
+                resp.raise_for_status()
+                expanded = resp.json()["choices"][0]["message"]["content"].strip()
+                if expanded and len(expanded) < 100:
+                    keywords = expanded
+        except Exception:
+            pass
+
+    # Build combined OR filter using raw SQL for PG-specific features
+    words = [w for w in keywords.split() if w]
+    tsquery_str = " | ".join(words) if words else q
+
+    return or_(
+        # FTS full-text search on content
+        text("to_tsvector('simple', COALESCE(raw_text, '')) @@ to_tsquery('simple', :tsq)").bindparams(tsq=tsquery_str),
+        # Trigram similarity on title
+        text("similarity(COALESCE(manual_title, auto_title, ''), :trgm_q) > 0.2").bindparams(trgm_q=q),
+        # Fallback ILIKE
+        DiaryEntry.raw_text.ilike(f"%{q}%"),
+    )
+
+
 def _entry_to_brief(entry: DiaryEntry) -> DiaryBrief:
     preview = _strip_html(entry.raw_text or "")[:120]
     return DiaryBrief(
@@ -419,9 +469,9 @@ async def list_diaries(
         query = query.join(DiaryTag).where(DiaryTag.tag == tag)
         count_query = count_query.join(DiaryTag).where(DiaryTag.tag == tag)
     if q:
-        like_expr = f"%{q}%"
-        query = query.where(DiaryEntry.raw_text.ilike(like_expr))
-        count_query = count_query.where(DiaryEntry.raw_text.ilike(like_expr))
+        search_filter = _build_search_filter(q)
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
     if start_date:
         query = query.where(func.date(DiaryEntry.created_at) >= start_date)
         count_query = count_query.where(func.date(DiaryEntry.created_at) >= start_date)

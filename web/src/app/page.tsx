@@ -375,7 +375,7 @@ function HomePageInner() {
             <input
               type="text"
               className="input pl-10"
-              placeholder="搜索日记内容..."
+              placeholder="搜索日记，支持语义查询..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
