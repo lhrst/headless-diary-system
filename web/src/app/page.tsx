@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
-import { getDiaries, getTags, createDiary } from "@/lib/api";
+import { getDiaries, getTags, createDiary, getDailyInsight } from "@/lib/api";
 import type { DiaryBrief, TagSuggestItem } from "@/lib/types";
 import DiaryCard from "@/components/DiaryCard";
 import Navbar from "@/components/Navbar";
@@ -70,8 +70,20 @@ function HomePageInner() {
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
   const [newDiaryIds, setNewDiaryIds] = useState<Set<string>>(new Set());
+  const [insight, setInsight] = useState("");
+  const [insightLoading, setInsightLoading] = useState(true);
 
   const editorKeyRef = useRef(0);
+
+  // Fetch daily insight
+  useEffect(() => {
+    if (!authed) return;
+    setInsightLoading(true);
+    getDailyInsight()
+      .then((res) => setInsight(res.insight || ""))
+      .catch(() => {})
+      .finally(() => setInsightLoading(false));
+  }, [authed]);
 
   // Request geolocation on mount
   useEffect(() => {
@@ -205,6 +217,45 @@ function HomePageInner() {
     <>
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 py-8">
+        {/* Daily insight card */}
+        {authed && !insightLoading && insight && (
+          <div
+            className="mb-6 animate-fade-in"
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--color-surface, #fff)",
+              overflow: "hidden",
+            }}
+          >
+            <div className="flex items-start gap-3 px-5 py-4">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg mt-0.5"
+                style={{ backgroundColor: "var(--color-accent-bg)" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
+                  <path d="M10 21h4" />
+                </svg>
+              </div>
+              <div>
+                <p
+                  className="text-xs font-medium mb-1"
+                  style={{ color: "var(--color-text-tertiary)" }}
+                >
+                  最近的思考重点
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {insight}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quick publish */}
         {authed && (
           <div

@@ -299,6 +299,10 @@ export function startRetagAll() {
   });
 }
 
+export function getDailyInsight() {
+  return fetchApi<{ insight: string; entry_count: number }>("/diary/daily-insight");
+}
+
 export function getRetagStatus(taskId: string) {
   return fetchApi<{
     state: string;

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -494,6 +495,78 @@ async def suggest_diary(
     )
 
 
+@router.get("/daily-insight")
+async def get_daily_insight(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a daily insight summary of recent thinking themes. Cached in Redis for 12h."""
+    import redis as redis_lib
+    import httpx
+
+    cache_key = f"daily_insight:{current_user.id}:{date.today().isoformat()}"
+    try:
+        r = redis_lib.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        cached = r.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        r = None
+
+    since = datetime.utcnow() - timedelta(days=7)
+    result = await db.execute(
+        select(DiaryEntry)
+        .where(DiaryEntry.author_id == current_user.id, DiaryEntry.created_at >= since)
+        .order_by(DiaryEntry.created_at.desc())
+    )
+    entries = result.scalars().all()
+
+    if not entries:
+        return {"insight": "", "entry_count": 0}
+
+    summaries = []
+    for e in entries[:20]:
+        title = e.manual_title or e.auto_title or ""
+        content = (e.raw_text or "")[:200].replace("\n", " ")
+        summaries.append(f"- {title}: {content}")
+
+    prompt = (
+        "你是一个个人思考教练。以下是用户最近7天的日记摘要：\n\n"
+        + "\n".join(summaries)
+        + "\n\n请用2-3句话总结用户最近的思考重点和关注方向，语气温和、有洞察力。"
+        "不要列举日记标题，要提炼出背后的思考脉络。控制在80字以内。"
+    )
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.post(
+                f"{settings.OPENROUTER_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": settings.LLM_MODEL_FAST,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 200,
+                },
+            )
+            resp.raise_for_status()
+            insight = resp.json()["choices"][0]["message"]["content"].strip()
+    except Exception:
+        return {"insight": "", "entry_count": len(entries)}
+
+    result_data = {"insight": insight, "entry_count": len(entries)}
+
+    if r:
+        try:
+            r.setex(cache_key, 43200, json.dumps(result_data, ensure_ascii=False))
+        except Exception:
+            pass
+
+    return result_data
+
+
 @router.get("/{entry_id}", response_model=DiaryDetail)
 async def get_diary(
     entry_id: uuid.UUID,
@@ -810,3 +883,5 @@ async def batch_generate_tags(
         "model": CHEAP_MODEL,
         "errors": errors[:5] if errors else [],
     }
+
+
