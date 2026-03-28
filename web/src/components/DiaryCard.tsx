@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -55,6 +55,28 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
 
   const isPlaceholder = diary.id.startsWith("temp-");
   const cleanPreview = stripHtml(diary.preview);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // If we already have full content, copy it; otherwise fetch first
+    let text = fullContent;
+    if (!text) {
+      try {
+        const detail = await getDiary(diary.id);
+        text = detail.content;
+        setFullContent(text);
+      } catch {
+        text = cleanPreview;
+      }
+    }
+    // Strip HTML/markdown for clean plain text
+    const plain = (text || "").replace(/<[^>]+>/g, "").trim();
+    const copyText = `${diary.title || ""}\n\n${plain}`.trim();
+    await navigator.clipboard.writeText(copyText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [fullContent, diary.id, diary.title, cleanPreview]);
 
   const handleExpand = async () => {
     if (isPlaceholder) return;
@@ -104,6 +126,23 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
           {/* Edit + Expand buttons */}
           {!isPlaceholder && (
             <div className="flex items-center gap-1">
+              <button
+                onClick={handleCopy}
+                className="btn-ghost p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="复制全文"
+                style={{ color: copied ? "var(--color-primary)" : "var(--color-text-tertiary)" }}
+              >
+                {copied ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                )}
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -167,6 +206,13 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
                 收起
               </button>
               <div className="flex items-center gap-2">
+                <button
+                  className="btn-ghost text-xs"
+                  style={{ color: copied ? "var(--color-primary)" : "var(--color-text-secondary)" }}
+                  onClick={handleCopy}
+                >
+                  {copied ? "已复制" : "复制全文"}
+                </button>
                 <button
                   className="btn-ghost text-xs"
                   style={{ color: "var(--color-text-secondary)" }}
