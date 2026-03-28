@@ -96,7 +96,7 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
 
   return (
     <article
-      className={`card ${isNew ? "animate-warm-glow" : "animate-fade-in-up"}`}
+      className={`card group ${isNew ? "animate-warm-glow" : "animate-fade-in-up"}`}
       style={{
         animationDelay: isNew ? "0ms" : `${index * 60}ms`,
         opacity: isPlaceholder ? 0.7 : undefined,
