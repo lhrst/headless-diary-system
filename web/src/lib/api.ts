@@ -138,6 +138,10 @@ export async function refreshToken(): Promise<TokenResponse> {
   return data;
 }
 
+export async function getMe(): Promise<import("./types").UserResponse> {
+  return fetchApi<import("./types").UserResponse>("/auth/me");
+}
+
 /* ── Diaries ── */
 
 export async function getDiaries(params?: {

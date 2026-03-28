@@ -3,15 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { isAuthenticated, clearTokens } from "@/lib/auth";
+import { getMe } from "@/lib/api";
 
 export default function Navbar() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [showAuth, setShowAuth] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
-    setShowAuth(isAuthenticated());
+    const authed = isAuthenticated();
+    setShowAuth(authed);
+    if (authed) {
+      getMe().then((u) => setUsername(u.display_name || u.username)).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -155,6 +161,23 @@ export default function Navbar() {
               <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
+          {username && (
+            <span
+              className="hidden sm:inline-flex items-center gap-1.5 px-2 h-9 text-xs font-medium"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
+                style={{
+                  backgroundColor: "var(--color-primary)",
+                  color: "#fff",
+                }}
+              >
+                {username[0].toUpperCase()}
+              </span>
+              {username}
+            </span>
+          )}
           <button onClick={handleLogout} className="btn-ghost h-9 text-xs">
             登出
           </button>
