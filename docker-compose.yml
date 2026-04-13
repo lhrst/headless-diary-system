@@ -7,6 +7,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
     volumes:
+      # Live-mount Python source so future prod updates = `git pull && restart`
+      # (no need to rebuild the image, which would OOM a small server).
+      - ./api/app:/app/app
       - ./data/diaries:/data/diaries
       - ./data/media:/data/media
     depends_on:
@@ -25,6 +28,8 @@ services:
     environment:
       - TZ=Asia/Shanghai
     volumes:
+      # Same live source mount so Celery picks up task code changes without rebuild.
+      - ./api/app:/app/app
       - ./data/diaries:/data/diaries
       - ./data/media:/data/media
       - whisper-models:/root/.cache/huggingface

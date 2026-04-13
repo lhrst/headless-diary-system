@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     # ── Video processing ──────────────────────────────────────
     VIDEO_MAX_KEYFRAMES: int = 10
 
+    # ── Auth hardening ────────────────────────────────────────
+    # When true, /auth/register returns 404 (closed to new signups).
+    DISABLE_REGISTER: bool = False
+    # Rate limits per IP per minute for auth endpoints.
+    AUTH_LOGIN_LIMIT_PER_MIN: int = 5
+    AUTH_REGISTER_LIMIT_PER_MIN: int = 3
+    # After N consecutive failed logins (per IP+username), lock out for N seconds.
+    AUTH_MAX_LOGIN_FAILURES: int = 5
+    AUTH_LOCKOUT_SECONDS: int = 900
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
