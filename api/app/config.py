@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     AUTH_MAX_LOGIN_FAILURES: int = 5
     AUTH_LOCKOUT_SECONDS: int = 900
 
+    # ── Agent service token ───────────────────────────────────
+    # Bearer token allowing external services (e.g. HappyClaw running on the
+    # user's Mac) to post DiaryEntries / DiaryComments AS the built-in agent
+    # user. The agent user's password_hash is "!nologin", so normal /auth/login
+    # doesn't work — this token is the only way in. Keep it long and random;
+    # rotate by simply changing this env var.
+    AGENT_SERVICE_TOKEN: str = ""
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
