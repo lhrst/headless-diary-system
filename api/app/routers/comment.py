@@ -53,20 +53,43 @@ async def add_comment(
             detail="Diary entry not found",
         )
 
+    # Validate parent_comment_id if provided: must belong to the same entry.
+    parent_comment = None
+    if body.parent_comment_id is not None:
+        parent_result = await db.execute(
+            select(DiaryComment).where(DiaryComment.id == body.parent_comment_id)
+        )
+        parent_comment = parent_result.scalar_one_or_none()
+        if parent_comment is None or parent_comment.entry_id != entry_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid parent_comment_id",
+            )
+
     comment = DiaryComment(
         entry_id=entry_id,
         author_id=current_user.id,
         author_role=current_user.role,
+        parent_comment_id=body.parent_comment_id,
         content=body.content,
     )
     db.add(comment)
     await db.flush()
     await db.refresh(comment)
 
-    # Detect @agent command and auto-dispatch
+    # Decide whether to trigger the agent:
+    # 1. explicit @agent token in the content, OR
+    # 2. implicit: this comment is a direct reply to an agent-authored comment
+    agent_command: str | None = None
     match = _AGENT_CMD_RE.search(body.content)
     if match:
         agent_command = match.group(1).strip()
+    elif parent_comment is not None and parent_comment.author_role == "agent":
+        # Implicit trigger: treat the whole reply as the command.
+        # This is what enables "reply-to-agent" threading to keep the conversation going.
+        agent_command = body.content.strip()
+
+    if agent_command:
         task_type = _classify_command(agent_command)
         task = AgentTask(
             entry_id=entry_id,

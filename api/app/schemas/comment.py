@@ -11,6 +11,7 @@ class CommentCreate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     content: str
+    parent_comment_id: uuid.UUID | None = None
 
 
 class CommentResponse(BaseModel):
@@ -20,6 +21,7 @@ class CommentResponse(BaseModel):
     entry_id: uuid.UUID
     author_id: uuid.UUID
     author_role: str
+    parent_comment_id: uuid.UUID | None = None
     content: str
     metadata_: dict[str, Any] | None = Field(default=None, alias="metadata_")
     created_at: datetime.datetime

@@ -31,6 +31,12 @@ class DiaryComment(Base):
     author_role: Mapped[str] = mapped_column(
         String(20), server_default="user", nullable=False
     )
+    # Threaded reply: points to the parent comment this one is replying to.
+    parent_comment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("diary_comments.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_: Mapped[dict | None] = mapped_column(
         "metadata", JSONB, nullable=True

@@ -10,6 +10,8 @@ services:
       # Live-mount Python source so future prod updates = `git pull && restart`
       # (no need to rebuild the image, which would OOM a small server).
       - ./api/app:/app/app
+      - ./api/alembic:/app/alembic
+      - ./api/alembic.ini:/app/alembic.ini:ro
       - ./data/diaries:/data/diaries
       - ./data/media:/data/media
     depends_on:
@@ -30,6 +32,8 @@ services:
     volumes:
       # Same live source mount so Celery picks up task code changes without rebuild.
       - ./api/app:/app/app
+      - ./api/alembic:/app/alembic
+      - ./api/alembic.ini:/app/alembic.ini:ro
       - ./data/diaries:/data/diaries
       - ./data/media:/data/media
       - whisper-models:/root/.cache/huggingface

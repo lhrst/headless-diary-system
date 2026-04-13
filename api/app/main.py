@@ -58,11 +58,20 @@ async def health_check():
 
 
 # ── Routers ───────────────────────────────────────────────────
-from app.routers import auth, diary, tag, comment, agent, media  # noqa: E402
+from app.routers import (  # noqa: E402
+    agent,
+    agent_service,
+    auth,
+    comment,
+    diary,
+    media,
+    tag,
+)
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(diary.router, prefix="/api/v1")
 app.include_router(tag.router, prefix="/api/v1")
 app.include_router(comment.router, prefix="/api/v1")
 app.include_router(agent.router, prefix="/api/v1")
+app.include_router(agent_service.router, prefix="/api/v1")
 app.include_router(media.router, prefix="/api/v1")
