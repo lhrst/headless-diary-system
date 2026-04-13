@@ -7,7 +7,7 @@ import uuid
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,6 +18,21 @@ from app.models.diary import DiaryEntry
 from app.models.reference import DiaryReference
 from app.models.tag import DiaryTag
 from app.models.user import User
+from app.services.agent_user import AGENT_UUID
+
+
+def _visible_author_clause(user: User):
+    """SQL clause for 'entries this user should see in their feed'.
+
+    Includes the user's own entries **and** all entries authored by the
+    built-in agent user, so agent-generated posts appear in everyone's feed.
+    Kept narrow on purpose: we deliberately do NOT include posts by other
+    real users — the diary is per-user, the agent is the one shared author.
+    """
+    return or_(
+        DiaryEntry.author_id == user.id,
+        DiaryEntry.author_id == AGENT_UUID,
+    )
 from app.schemas.diary import (
     DiaryBrief,
     DiaryCreate,
@@ -453,15 +468,16 @@ async def list_diaries(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    visible = _visible_author_clause(current_user)
     query = (
         select(DiaryEntry)
         .options(selectinload(DiaryEntry.tags))
-        .where(DiaryEntry.author_id == current_user.id)
+        .where(visible)
     )
     count_query = (
         select(func.count())
         .select_from(DiaryEntry)
-        .where(DiaryEntry.author_id == current_user.id)
+        .where(visible)
     )
 
     # Filters
@@ -522,7 +538,7 @@ async def suggest_diary(
     query = (
         select(DiaryEntry)
         .where(
-            DiaryEntry.author_id == current_user.id,
+            _visible_author_clause(current_user),
             (DiaryEntry.manual_title.ilike(like_expr))
             | (DiaryEntry.auto_title.ilike(like_expr)),
         )
