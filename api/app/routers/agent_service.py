@@ -3,11 +3,21 @@
 External services (HappyClaw on the user's Mac, CI jobs, etc.) authenticate
 with a bearer token matching settings.AGENT_SERVICE_TOKEN and are allowed to:
 
-- POST /api/v1/agent-service/entry    — create a DiaryEntry authored by the
-                                        built-in agent user
-- POST /api/v1/agent-service/comment  — create a DiaryComment authored by the
-                                        agent user, with optional threading
-                                        (parent_comment_id)
+- POST /api/v1/agent-service/entry            — create a DiaryEntry authored
+                                                 by the built-in agent user
+- POST /api/v1/agent-service/comment          — create a DiaryComment authored
+                                                 by the agent user, with
+                                                 optional threading
+                                                 (parent_comment_id)
+- POST /api/v1/agent-service/claim-tasks      — atomically claim N pending
+                                                 chat-type AgentTasks, mark
+                                                 them running, return payload
+                                                 with full diary context for
+                                                 HappyClaw to answer
+- POST /api/v1/agent-service/task/{id}/result — submit the agent's answer,
+                                                 auto-creates a comment and
+                                                 marks the task done
+- POST /api/v1/agent-service/task/{id}/fail   — mark task failed with error
 
 The agent user's password_hash is "!nologin" so it can never log in via
 /auth/login — this router is the only way to post as the agent.
@@ -16,7 +26,9 @@ The agent user's password_hash is "!nologin" so it can never log in via
 from __future__ import annotations
 
 import hashlib
+import re
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -26,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.middleware.service_auth import require_service_token
+from app.models.agent_task import AgentTask
 from app.models.comment import DiaryComment
 from app.models.diary import DiaryEntry
 from app.models.tag import DiaryTag
@@ -166,3 +179,262 @@ async def create_comment_as_agent(
     await db.flush()
     await db.refresh(comment)
     return comment
+
+
+# ── Task claim / result / fail (HappyClaw polling protocol) ──
+
+class ClaimTasksRequest(BaseModel):
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class ClaimedTask(BaseModel):
+    id: uuid.UUID
+    entry_id: uuid.UUID
+    command: str
+    entry_title: str
+    entry_content: str
+    entry_created_at: datetime
+    additional_context: str
+
+
+class ClaimTasksResponse(BaseModel):
+    tasks: list[ClaimedTask]
+
+
+async def _build_task_context(
+    db: AsyncSession, entry: DiaryEntry, command: str
+) -> str:
+    """Build supplementary context for an @agent command.
+
+    Inspects the command for tag mentions (#xxx), diary references ([[uuid]]),
+    and weekly keywords, then fetches the relevant extra entries so HappyClaw
+    has everything it needs without re-querying.
+    """
+    parts: list[str] = []
+
+    # Tag mention → recent entries with that tag.
+    tag_match = re.search(r"#([\w\u4e00-\u9fff]+)", command)
+    if tag_match:
+        tag = tag_match.group(1).lower()
+        result = await db.execute(
+            select(DiaryEntry)
+            .join(DiaryTag, DiaryTag.entry_id == DiaryEntry.id)
+            .where(
+                DiaryTag.tag == tag,
+                DiaryEntry.author_id == entry.author_id,
+            )
+            .order_by(DiaryEntry.created_at.desc())
+            .limit(10)
+        )
+        tag_entries = result.scalars().all()
+        if tag_entries:
+            parts.append(f"\nRecent entries tagged #{tag}:")
+            for e in tag_entries:
+                title = e.manual_title or e.auto_title or ""
+                parts.append(
+                    f"---\n[{title}] ({e.created_at.date()})\n"
+                    f"{(e.raw_text or '')[:500]}"
+                )
+
+    # [[uuid]] references.
+    for ref in re.findall(r"\[\[([^\]]+)\]\]", command):
+        try:
+            ref_uuid = uuid.UUID(ref.split("|")[0])
+        except ValueError:
+            continue
+        result = await db.execute(
+            select(DiaryEntry).where(DiaryEntry.id == ref_uuid)
+        )
+        ref_entry = result.scalar_one_or_none()
+        if ref_entry:
+            title = ref_entry.manual_title or ref_entry.auto_title or ""
+            parts.append(
+                f"\nReferenced diary [{title}]:\n{(ref_entry.raw_text or '')[:1000]}"
+            )
+
+    # Weekly summary keywords.
+    if any(kw in command for kw in ["周报", "本周", "这周", "weekly"]):
+        now = datetime.now(timezone.utc)
+        week_start = now - timedelta(days=now.weekday())
+        result = await db.execute(
+            select(DiaryEntry)
+            .where(
+                DiaryEntry.author_id == entry.author_id,
+                DiaryEntry.created_at >= week_start,
+            )
+            .order_by(DiaryEntry.created_at.desc())
+        )
+        week_entries = result.scalars().all()
+        if week_entries:
+            parts.append(
+                f"\nThis week's entries ({len(week_entries)} total):"
+            )
+            for e in week_entries:
+                title = e.manual_title or e.auto_title or ""
+                parts.append(
+                    f"- [{title}] ({e.created_at.date()}): "
+                    f"{(e.raw_text or '')[:200]}..."
+                )
+
+    return "\n".join(parts)
+
+
+@router.post("/claim-tasks", response_model=ClaimTasksResponse)
+async def claim_tasks(
+    body: ClaimTasksRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Atomically claim pending chat-type agent tasks.
+
+    Uses `SELECT ... FOR UPDATE SKIP LOCKED` so concurrent pollers never
+    grab the same row. Marks each claimed row as 'running' before returning.
+    """
+    result = await db.execute(
+        select(AgentTask)
+        .where(
+            AgentTask.status == "pending",
+            AgentTask.task_type == "chat",
+        )
+        .order_by(AgentTask.created_at.asc())
+        .limit(body.limit)
+        .with_for_update(skip_locked=True)
+    )
+    tasks = result.scalars().all()
+
+    claimed: list[ClaimedTask] = []
+    for task in tasks:
+        task.status = "running"
+
+        entry_result = await db.execute(
+            select(DiaryEntry).where(DiaryEntry.id == task.entry_id)
+        )
+        entry = entry_result.scalar_one_or_none()
+        if entry is None:
+            task.status = "failed"
+            task.error = "diary entry not found"
+            task.completed_at = datetime.now(timezone.utc)
+            continue
+
+        additional_context = await _build_task_context(db, entry, task.command)
+
+        claimed.append(
+            ClaimedTask(
+                id=task.id,
+                entry_id=task.entry_id,
+                command=task.command,
+                entry_title=(
+                    entry.manual_title or entry.auto_title or "Untitled"
+                ),
+                entry_content=entry.raw_text or "",
+                entry_created_at=entry.created_at,
+                additional_context=additional_context,
+            )
+        )
+
+    await db.commit()
+    return ClaimTasksResponse(tasks=claimed)
+
+
+class TaskResultRequest(BaseModel):
+    content: str = Field(..., min_length=1)
+    metadata: dict | None = None
+    parent_comment_id: uuid.UUID | None = None
+
+
+class TaskFailRequest(BaseModel):
+    error: str = Field(..., min_length=1)
+
+
+async def _get_running_task_or_404(
+    db: AsyncSession, task_id: uuid.UUID
+) -> AgentTask:
+    result = await db.execute(
+        select(AgentTask).where(AgentTask.id == task_id)
+    )
+    task = result.scalar_one_or_none()
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+    if task.status not in ("running", "pending"):
+        # Idempotent-ish: allow submitting result for a task we claimed
+        # earlier even if something weird happened to its status.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Task already in terminal status: {task.status}",
+        )
+    return task
+
+
+@router.post(
+    "/task/{task_id}/result",
+    response_model=CommentResponse,
+)
+async def submit_task_result(
+    task_id: uuid.UUID,
+    body: TaskResultRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """HappyClaw posts the final answer for a claimed task.
+
+    Creates the agent comment, links it to the task, and marks the task done.
+    """
+    task = await _get_running_task_or_404(db, task_id)
+    await ensure_agent_user(db)
+
+    comment = DiaryComment(
+        entry_id=task.entry_id,
+        author_id=AGENT_UUID,
+        author_role="agent",
+        parent_comment_id=body.parent_comment_id,
+        content=body.content,
+        metadata_={
+            "task_id": str(task.id),
+            "source": "happyclaw",
+            **(body.metadata or {}),
+        },
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+
+    task.status = "done"
+    task.result = body.content
+    task.result_comment_id = comment.id
+    task.completed_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+
+@router.post(
+    "/task/{task_id}/fail",
+    status_code=status.HTTP_200_OK,
+)
+async def fail_task(
+    task_id: uuid.UUID,
+    body: TaskFailRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """HappyClaw reports that a claimed task could not be answered."""
+    task = await _get_running_task_or_404(db, task_id)
+    await ensure_agent_user(db)
+
+    comment = DiaryComment(
+        entry_id=task.entry_id,
+        author_id=AGENT_UUID,
+        author_role="agent",
+        content=f"任务执行失败：{body.error[:500]}",
+        metadata_={"task_id": str(task.id), "source": "happyclaw"},
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+
+    task.status = "failed"
+    task.error = body.error
+    task.result_comment_id = comment.id
+    task.completed_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"ok": True}

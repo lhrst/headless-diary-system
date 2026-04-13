@@ -105,12 +105,15 @@ async def add_comment(
         # Mark entry as agent-marked
         entry.is_agent_marked = True
 
-        # Dispatch to Celery
-        try:
-            from app.tasks.agent_tasks import run_agent
-            run_agent.delay(str(task.id))
-        except Exception:
-            pass
+        # Dispatch: only improvement tasks go to Celery.
+        # Chat tasks stay at status='pending' until HappyClaw claims them
+        # via /api/v1/agent-service/claim-tasks.
+        if task_type == "improvement":
+            try:
+                from app.tasks.agent_tasks import run_agent
+                run_agent.delay(str(task.id))
+            except Exception:
+                pass
 
     return comment
 

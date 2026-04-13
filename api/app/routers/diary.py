@@ -249,12 +249,14 @@ async def create_diary(
     for tag_name in tags:
         db.add(DiaryTag(entry_id=entry.id, tag=tag_name.lower()))
 
-    # Parse @agent commands → create agent tasks and dispatch to Celery
+    # Parse @agent commands → create agent tasks.
+    # - improvement tasks go to Celery for the Claude Code CLI handler.
+    # - chat tasks stay at status='pending'; HappyClaw on the user's Mac
+    #   claims them via /api/v1/agent-service/claim-tasks.
     from app.models.agent_task import AgentTask
     agent_cmds = extract_agent_commands(body.content)
-    agent_task_ids = []
+    improvement_task_ids = []
     for cmd in agent_cmds:
-        # Classify: improvement or chat
         import re as _re
         _improvement_kw = _re.compile(r"改进|改善|优化|添加功能|新增|修复|improve|add feature|fix", _re.IGNORECASE)
         task_type = "improvement" if _improvement_kw.search(cmd) else "chat"
@@ -265,13 +267,13 @@ async def create_diary(
         db.add(task)
         await db.flush()
         await db.refresh(task)
-        agent_task_ids.append(str(task.id))
+        if task_type == "improvement":
+            improvement_task_ids.append(str(task.id))
 
     await db.flush()
     await db.refresh(entry)
 
-    # Dispatch agent tasks to Celery (after flush so IDs are available)
-    for tid in agent_task_ids:
+    for tid in improvement_task_ids:
         try:
             from app.tasks.agent_tasks import run_agent
             run_agent.delay(tid)
