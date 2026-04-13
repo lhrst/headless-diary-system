@@ -127,6 +127,30 @@ export default function DiaryDetailPage() {
                       <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
                     </svg>
                   </button>
+                  {/* Author avatar */}
+                  <span
+                    className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                    title={diary.is_agent_authored ? "AI 助手发布" : "我发布"}
+                    style={{
+                      backgroundColor: diary.is_agent_authored
+                        ? "var(--color-accent-bg)"
+                        : "var(--color-primary)",
+                      color: diary.is_agent_authored
+                        ? "var(--color-primary)"
+                        : "#fff",
+                      border: diary.is_agent_authored
+                        ? "1.5px solid var(--color-primary)"
+                        : "none",
+                    }}
+                  >
+                    {diary.is_agent_authored ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                      </svg>
+                    ) : (
+                      "我"
+                    )}
+                  </span>
                   <h1
                     className="font-serif text-2xl font-bold leading-tight"
                     style={{ color: "var(--color-text)" }}

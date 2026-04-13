@@ -42,6 +42,7 @@ class DiaryBrief(BaseModel):
     address: str | None = None
     weather: str | None = None
     weather_icon: str | None = None
+    is_agent_authored: bool = False
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -67,6 +68,7 @@ class DiaryDetail(BaseModel):
     weather_icon: str | None = None
     temperature: float | None = None
     is_agent_marked: bool
+    is_agent_authored: bool = False
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

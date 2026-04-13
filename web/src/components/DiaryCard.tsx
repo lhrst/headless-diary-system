@@ -54,6 +54,7 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
     : null;
 
   const isPlaceholder = diary.id.startsWith("temp-");
+  const isAgentAuthored = diary.is_agent_authored === true;
   const cleanPreview = stripHtml(diary.preview);
   const [copied, setCopied] = useState(false);
 
@@ -102,14 +103,38 @@ export default function DiaryCard({ diary, index = 0, isNew }: DiaryCardProps) {
         opacity: isPlaceholder ? 0.7 : undefined,
       }}
     >
-      {/* Header: title + time + actions */}
+      {/* Header: avatar + title + time + actions */}
       <div className="flex items-start justify-between gap-3">
         <div
-          className="min-w-0 flex-1 cursor-pointer"
+          className="min-w-0 flex-1 cursor-pointer flex items-start gap-2.5"
           onClick={handleExpand}
         >
+          {/* Author avatar */}
+          {!isPlaceholder && (
+            <span
+              className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold"
+              title={isAgentAuthored ? "AI 助手发布" : "我发布"}
+              style={{
+                backgroundColor: isAgentAuthored
+                  ? "var(--color-accent-bg)"
+                  : "var(--color-primary)",
+                color: isAgentAuthored ? "var(--color-primary)" : "#fff",
+                border: isAgentAuthored
+                  ? "1px solid var(--color-primary)"
+                  : "none",
+              }}
+            >
+              {isAgentAuthored ? (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                </svg>
+              ) : (
+                "我"
+              )}
+            </span>
+          )}
           <h3
-            className={`font-serif text-base font-semibold leading-snug ${isPlaceholder ? "skeleton h-5 w-2/3" : ""}`}
+            className={`min-w-0 flex-1 font-serif text-base font-semibold leading-snug ${isPlaceholder ? "skeleton h-5 w-2/3" : ""}`}
             style={{ color: "var(--color-text)" }}
           >
             {isPlaceholder ? "\u00A0" : diary.title || "无标题"}

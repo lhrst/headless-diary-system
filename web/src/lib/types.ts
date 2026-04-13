@@ -10,6 +10,7 @@ export interface DiaryBrief {
   address?: string;
   weather?: string;
   weather_icon?: string;
+  is_agent_authored?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +40,7 @@ export interface DiaryDetail {
   comments: CommentResponse[];
   agent_tasks: AgentTaskResponse[];
   is_agent_marked: boolean;
+  is_agent_authored?: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -131,6 +131,7 @@ def _entry_to_brief(entry: DiaryEntry) -> DiaryBrief:
         address=entry.address,
         weather=entry.weather,
         weather_icon=entry.weather_icon,
+        is_agent_authored=entry.author_id == AGENT_UUID,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )
@@ -185,6 +186,7 @@ def _entry_to_detail(entry: DiaryEntry, content: str) -> DiaryDetail:
         weather_icon=entry.weather_icon,
         temperature=entry.temperature,
         is_agent_marked=entry.is_agent_marked,
+        is_agent_authored=entry.author_id == AGENT_UUID,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )
@@ -449,6 +451,7 @@ async def create_diary(
         weather_icon=entry.weather_icon,
         temperature=entry.temperature,
         is_agent_marked=bool(agent_cmds),
+        is_agent_authored=entry.author_id == AGENT_UUID,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )

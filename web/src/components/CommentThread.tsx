@@ -150,7 +150,7 @@ export default function CommentThread({
           return (
             <div
               key={c.id}
-              className="animate-fade-in-up p-4"
+              className="animate-fade-in-up flex gap-3 p-4"
               style={{
                 animationDelay: `${i * 60}ms`,
                 border: "1px solid var(--color-border)",
@@ -160,35 +160,52 @@ export default function CommentThread({
                   : "var(--color-surface, #fff)",
               }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span
-                  className="flex items-center gap-1.5 text-sm font-medium"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  {isAgent ? (
-                    <>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                      </svg>
-                      AI 助手
-                    </>
-                  ) : (
-                    "我"
-                  )}
-                </span>
-                <time
-                  className="text-xs"
-                  style={{ color: "var(--color-text-tertiary)" }}
-                >
-                  {formatTime(c.created_at)}
-                </time>
-              </div>
-              <p
-                className="text-sm leading-relaxed whitespace-pre-wrap"
-                style={{ color: "var(--color-text-secondary)" }}
+              {/* Avatar */}
+              <span
+                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                title={isAgent ? "AI 助手" : "我"}
+                style={{
+                  backgroundColor: isAgent
+                    ? "var(--color-surface, #fff)"
+                    : "var(--color-primary)",
+                  color: isAgent ? "var(--color-primary)" : "#fff",
+                  border: isAgent
+                    ? "1.5px solid var(--color-primary)"
+                    : "none",
+                }}
               >
-                {c.content}
-              </p>
+                {isAgent ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                  </svg>
+                ) : (
+                  "我"
+                )}
+              </span>
+
+              {/* Content */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    {isAgent ? "AI 助手" : "我"}
+                  </span>
+                  <time
+                    className="text-xs"
+                    style={{ color: "var(--color-text-tertiary)" }}
+                  >
+                    {formatTime(c.created_at)}
+                  </time>
+                </div>
+                <p
+                  className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {c.content}
+                </p>
+              </div>
             </div>
           );
         })}
