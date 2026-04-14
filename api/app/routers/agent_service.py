@@ -201,6 +201,32 @@ class ClaimTasksResponse(BaseModel):
     tasks: list[ClaimedTask]
 
 
+class PendingCountResponse(BaseModel):
+    count: int
+
+
+@router.get("/pending-count", response_model=PendingCountResponse)
+async def pending_count(db: AsyncSession = Depends(get_db)):
+    """Count pending chat-type agent tasks without touching state.
+
+    HappyClaw's script-mode poller hits this every minute — a pure COUNT(*)
+    is cheap enough that idle polling has zero measurable overhead. When the
+    count is positive the poller injects a wake-up message into the main
+    container, which does the real atomic claim via /claim-tasks.
+    """
+    from sqlalchemy import func
+
+    result = await db.execute(
+        select(func.count())
+        .select_from(AgentTask)
+        .where(
+            AgentTask.status == "pending",
+            AgentTask.task_type == "chat",
+        )
+    )
+    return PendingCountResponse(count=int(result.scalar() or 0))
+
+
 async def _build_task_context(
     db: AsyncSession, entry: DiaryEntry, command: str
 ) -> str:
@@ -312,7 +338,7 @@ async def claim_tasks(
         if entry is None:
             task.status = "failed"
             task.error = "diary entry not found"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             continue
 
         additional_context = await _build_task_context(db, entry, task.command)
@@ -402,7 +428,7 @@ async def submit_task_result(
     task.status = "done"
     task.result = body.content
     task.result_comment_id = comment.id
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     await db.refresh(comment)
     return comment
@@ -435,6 +461,6 @@ async def fail_task(
     task.status = "failed"
     task.error = body.error
     task.result_comment_id = comment.id
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     return {"ok": True}
