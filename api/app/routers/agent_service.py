@@ -238,6 +238,25 @@ async def _build_task_context(
     """
     parts: list[str] = []
 
+    # Full comment thread on this entry — critical context, because @agent
+    # commands are usually written as a new comment that references earlier
+    # comments ("调研这几个渠道" → the channels were listed in prior comments,
+    # not in the main entry body).
+    comments_result = await db.execute(
+        select(DiaryComment)
+        .where(DiaryComment.entry_id == entry.id)
+        .order_by(DiaryComment.created_at.asc())
+        .limit(50)
+    )
+    all_comments = comments_result.scalars().all()
+    if all_comments:
+        parts.append("\nComment thread on this entry (chronological):")
+        for c in all_comments:
+            role_label = "agent" if c.author_role == "agent" else "user"
+            ts = c.created_at.strftime("%Y-%m-%d %H:%M")
+            snippet = (c.content or "")[:800]
+            parts.append(f"---\n[{role_label} @ {ts}]\n{snippet}")
+
     # Tag mention → recent entries with that tag.
     tag_match = re.search(r"#([\w\u4e00-\u9fff]+)", command)
     if tag_match:
