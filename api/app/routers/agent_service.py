@@ -357,7 +357,7 @@ async def claim_tasks(
         if entry is None:
             task.status = "failed"
             task.error = "diary entry not found"
-            task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            task.completed_at = datetime.now(timezone.utc)
             continue
 
         additional_context = await _build_task_context(db, entry, task.command)
@@ -447,7 +447,7 @@ async def submit_task_result(
     task.status = "done"
     task.result = body.content
     task.result_comment_id = comment.id
-    task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    task.completed_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(comment)
     return comment
@@ -480,6 +480,6 @@ async def fail_task(
     task.status = "failed"
     task.error = body.error
     task.result_comment_id = comment.id
-    task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    task.completed_at = datetime.now(timezone.utc)
     await db.commit()
     return {"ok": True}

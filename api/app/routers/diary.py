@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
@@ -584,7 +584,7 @@ async def get_daily_insight(
     except Exception:
         r = None
 
-    since = datetime.utcnow() - timedelta(days=7)
+    since = datetime.now(timezone.utc) - timedelta(days=7)
     result = await db.execute(
         select(DiaryEntry)
         .where(DiaryEntry.author_id == current_user.id, DiaryEntry.created_at >= since)
